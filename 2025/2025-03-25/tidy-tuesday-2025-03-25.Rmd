@@ -1,0 +1,142 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: show
+date: "2025-03-25"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-03-25
+
+
+**Amazon Report**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               tidytext
+               )
+```
+
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-03-25')
+## OR
+tuesdata <- tidytuesdayR::tt_load(2025, week = 12)
+
+report_words_clean <- tuesdata$report_words_clean
+
+```
+
+```{r summary}
+
+report_words_clean |> 
+  group_by(year) |> 
+  count() |> 
+  ggplot() +
+  geom_bar(aes(x = year,
+               y= n),
+           stat = "identity") +
+  theme_minimal()
+
+```
+
+
+```{r eda}
+
+report_words_clean |> 
+   group_by(word) |> 
+   count() |> 
+  arrange(-n)
+
+```
+
+
+```{r eda-customers}
+
+total_words <-  report_words_clean |> 
+  group_by(year) |> 
+  summarise(n_total_words = n())
+
+
+customers_words <-  report_words_clean |> 
+  group_by(year, word) |> 
+  filter(word == "customers") |> 
+  mutate(n_customers = n()) |> 
+  distinct(year, .keep_all = TRUE)
+
+
+customers_plot <-  left_join(total_words, customers_words, by = "year")
+
+customers_plot <-  customers_plot |> 
+  mutate(prop_customers = 100*(n_customers / n_total_words))
+```
+
+```{r cust-plot}
+
+
+customers_plot |> 
+  
+  ggplot(aes( x= factor(year), 
+                  y = prop_customers)) + 
+  
+  geom_point( 
+            
+             colour = "darkblue",
+             size   =  3,
+             alpha = 0.6) + 
+  
+  geom_line(group = 1,
+            size = 1,
+            colour = "darkblue") + 
+
+
+  scale_y_continuous(limits = c(0, 1)) + 
+  
+  labs( x = "Year of report", 
+        y = "Proportion customers (%)",
+        title = "Amazon Report",
+        subtitle = "Is there proportion of words that are customers changing over time") + 
+  
+  
+  theme_minimal()
+
+ggsave(filename = "Amazon_word_plot.jpeg",
+        plot    = last_plot(),
+        dpi     = 300)
+
+
+```
+
+## END
+
+
+
+
+

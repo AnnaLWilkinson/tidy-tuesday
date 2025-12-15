@@ -1,0 +1,102 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- 'output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'pokemon.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-04-01"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-01/readme.md
+
+
+**Pokemon**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-04-01')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 13)
+
+pokemon_df <- tuesdata$pokemon_df
+
+```
+
+```{r explore}
+
+skimr::skim(pokemon_df)
+
+summary(pokemon_df)
+```
+
+```{r exploratory-plot-1}
+
+# Plot
+
+pokemon_df |> 
+  filter(generation_id ==1) |> 
+  filter(type_1 == "fire") |> 
+ggplot( 
+       mapping = aes(x = pokemon, 
+                 y = height)) +
+  geom_point(color = "#BE5C48") + 
+  geom_segment( aes(x = pokemon, 
+                    xend = pokemon, 
+                    y = 0, 
+                    yend = height),
+                color = "#cd5239") + 
+  coord_flip() +
+  labs(title = "Pokemon") + 
+  theme(
+    
+    panel.background = element_rect(fill = "#c68d81")
+    
+  )
+
+ggsave(file = 'Pokemon_lollipop.jpeg',
+       plot = last_plot(),
+       dpi = 300)
+
+```
+
+
+
+
+

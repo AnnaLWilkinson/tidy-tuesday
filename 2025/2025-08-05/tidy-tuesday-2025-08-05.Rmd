@@ -1,0 +1,162 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'income_inequality.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-07-29"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-08-05/readme.md
+
+
+**Income Inequality Before and After Taxes**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis,
+               gghighlight,
+               plotly
+               )
+
+```
+
+```{r import}
+
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-08-05')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 31)
+
+income_inequality_processed <- tuesdata$income_inequality_processed
+income_inequality_raw <- tuesdata$income_inequality_raw
+
+# Option 2: Read directly from GitHub
+
+# income_inequality_processed <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-05/income_inequality_processed.csv')
+# income_inequality_raw <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-05/income_inequality_raw.csv')
+```
+
+
+```{r summary}
+
+summary(income_inequality_processed)
+summary(income_inequality_raw)
+
+```
+
+```{r eda-gini}
+
+income_inequality_processed |> 
+  filter(Entity == "Australia") |> 
+  ggplot() + 
+  geom_line(aes(x = Year, 
+                 y = gini_mi_eq))  # gini coeff measures inequality from 0 to 1. Higher = high inequality. mi is pre-tax.
+
+
+income_inequality_processed |> 
+  ggplot() + 
+  geom_line(aes(x = Year,
+                y = gini_mi_eq, 
+                colour = Entity,
+                group = Entity))
+
+```
+
+```{r plotly}
+
+my_plot <-  plot_ly(data = income_inequality_processed, 
+                    x = ~Year, 
+                    y = ~gini_mi_eq,
+                    color = ~Entity)
+
+my_plot
+
+my_plot <- my_plot |> 
+  add_lines(x = ~Year, 
+            y = ~gini_mi_eq,
+            color = ~Entity)
+
+
+my_plot
+
+
+my_plot <- my_plot |> 
+  layout(title = "Income equality",
+         yaxis = list(range = c(0,1),
+                      title = "Gini coefficient"))
+
+my_plot
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

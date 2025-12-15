@@ -1,0 +1,197 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'british_library.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-07-15"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-15/readme.md
+
+
+**British Library Funding**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-07-15')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 28)
+
+bl_funding <- tuesdata$bl_funding
+
+# Option 2: Read directly from GitHub
+
+#bl_funding <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-15/bl_funding.csv')
+
+```
+
+```{r summary}
+
+glimpse(bl_funding)
+skimr::skim(bl_funding)
+summary(bl_funding)
+```
+
+
+```{r eda-time-funding}
+
+bl_funding |> 
+  ggplot() + 
+  geom_point(aes(x = year, 
+                 y = nominal_gbp_millions))
+
+bl_funding |> 
+  ggplot() + 
+  geom_point(aes(x = year, 
+                 y = total_y2000_gbp_millions))
+
+```
+
+
+```{r smoothing}
+
+bl_funding |> 
+  ggplot(aes(x = year, 
+                 y = total_y2000_gbp_millions)) + 
+  geom_point() + 
+  # geom_smooth(method  = "lm", 
+  #             formula = y ~ x) + 
+  geom_smooth(method  = "glm", 
+              formula = y ~ splines::bs(x, 6)) + 
+  geom_smooth(method  = "glm", 
+              formula = y ~ splines::ns(x, 7))
+  
+```
+
+```{r pretty-smoothing}
+
+bl_funding |> 
+  ggplot(aes(x = year, 
+                 y = total_y2000_gbp_millions)) + 
+  geom_point() + 
+  geom_smooth(method  = "lm", 
+               formula = y ~ x,
+              alpha = 0.1,
+              aes(colour = "Linear")) + 
+  geom_smooth(method  = "glm", 
+              formula = y ~ splines::bs(x, 6),
+              alpha = 0.1,
+              aes(colour = "B-spline - 6 knots")) + 
+  geom_smooth(method  = "glm", 
+              formula = y ~ splines::bs(x, 10),
+              alpha = 0.1,
+              aes(colour = "B-spline - 10 knots")) + 
+  
+  geom_smooth(method  = "glm", 
+              formula = y ~ splines::ns(x, 6),
+              alpha = 0.1,
+              aes(colour = "Natural spline"))  +
+  
+  scale_colour_manual(values = c("#3f49a4", "darkorange", "#9EA372" , "#CC3A73")) + 
+  
+  scale_x_continuous(breaks = seq(1998, 2023,1)) + 
+  
+  
+  labs(title    = "British Library Funding", 
+       subtitle = "What is the best fit for modelling time?",
+       y        = "Total funding, Y2000 GBP (millions)",
+       x        = "",
+       colour   = "",
+       caption = "Both spline models fit with six knots") + 
+  
+  theme_classic() +
+  
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5),
+    panel.grid.major = element_line(linewidth = 0.5)
+  )
+
+
+ggsave(filename = "../figs/british_library.jpeg",
+       plot = last_plot())
+
+```
+
+
+
+## END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

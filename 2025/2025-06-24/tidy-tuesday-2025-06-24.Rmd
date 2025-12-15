@@ -1,0 +1,229 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'measles.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-06-24"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-06-24/readme.md
+
+
+**Measles cases across the world**
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               gghighlight
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-06-24')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 25)
+
+cases_month <- tuesdata$cases_month
+cases_year <- tuesdata$cases_year
+
+# Option 2: Read directly from GitHub
+
+#cases_month <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-24/cases_month.csv')
+#cases_year <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-24/cases_year.csv')
+
+```
+
+
+
+```{r summary}
+skimr::skim(cases_month)
+skimr::skim(cases_year)
+
+summary(cases_year)
+
+unique(cases_year$region)
+
+tabyl(cases_year, region, country)
+
+
+cases_year |> 
+  select(region, country) |> 
+  group_by(region) |> 
+  distinct(country) |> 
+  count()
+
+
+```
+
+
+```{r eda-incidence}
+
+cases_year |> 
+  filter(region == "SEARO") |> 
+  ggplot() + 
+  geom_point(aes(x = year,
+                 y = measles_incidence_rate_per_1000000_total_population,
+                 colour = country))
+```
+
+
+```{r eda-incidence-line}
+
+cases_year |> 
+  filter(region == "SEARO") |> 
+  ggplot(aes(x = year,
+                 y = measles_incidence_rate_per_1000000_total_population,
+                 colour = country)) + 
+  geom_point() + 
+  geom_line()
+
+```
+
+```{r eda-incidence-facet}
+
+cases_year |> 
+  filter(region == "SEARO") |> 
+  ggplot(aes(x = year,
+                 y = measles_incidence_rate_per_1000000_total_population)) + 
+  geom_point() + 
+  geom_line() + 
+  facet_wrap(~country)
+  
+
+```
+
+```{r eda-incidence-highlight}
+
+cases_year |> 
+  filter(region == "SEARO") |> 
+  ggplot(aes(x = year,
+             y = measles_incidence_rate_per_1000000_total_population,
+             colour = country)) + 
+  geom_line() + 
+  gghighlight() +
+  facet_wrap(~country)
+  
+
+```
+
+
+```{r pretty-highlight}
+range(cases_year$year)
+cases_year |> 
+  filter(region == "SEARO") |> 
+  distinct(country) |> 
+  unlist()
+
+country.labs <-  as_labeller(
+          c(`Bangladesh` = "Bangladesh"  ,
+            `Bhutan`     = "Bhutan",
+            `Democratic People's Republic of Korea` = "PRK",
+            `India` =  "India",
+            `Indonesia` = "Indonesia",
+            `Maldives`  =  "Maldives" ,
+            `Myanmar`   = "Myanmar",
+            `Nepal`     = "Nepal",
+            `Sri Lanka` =  "Sri Lanka",
+            `Thailand`  =  "Thailand" ,
+            `Timor-Leste` = "Timor-Leste" ))
+
+cases_year |> 
+  filter(region == "SEARO") |> 
+  ggplot(aes(x = year,
+             y = measles_incidence_rate_per_1000000_total_population,
+             colour = country)) + 
+  geom_line() + 
+  gghighlight(use_direct_label = FALSE) +
+  
+  scale_x_continuous(limits = c(2012, 2025),
+                     breaks = c(2012, 2014, 2016, 2018, 2020, 2022, 2024)) + 
+  
+  labs(y = "Measles incidence rate per 100,000",
+       x = "",
+       title = "Measles cases across the world",
+       subtitle = "How does incidence compare in each country to all other countries?",
+       caption = "PRK: Democratic People's Republic of Korea") + 
+  
+  theme_classic() + 
+  
+  theme(
+    
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90,
+                               vjust = 0.5,
+                               hjust = 1),
+    aspect.ratio = 1
+  ) + 
+
+  facet_wrap(~country,
+             labeller = as_labeller(country.labs))
+
+ggsave(filename = "../figs/measles.jpg", 
+       plot = last_plot())
+  
+
+```
+
+
+### END
+
+
+
+
+
+
+
+

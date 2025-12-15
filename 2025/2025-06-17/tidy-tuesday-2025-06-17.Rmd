@@ -1,0 +1,333 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'api_specs.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-06-17"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-06-17/readme.md
+
+
+**API Specs**
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               ggridges,
+               ggdist
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-06-17')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 24)
+
+api_categories <- tuesdata$api_categories
+api_info <- tuesdata$api_info
+api_logos <- tuesdata$api_logos
+api_origins <- tuesdata$api_origins
+apisguru_apis <- tuesdata$apisguru_apis
+
+# Option 2: Read directly from GitHub
+
+# api_categories <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-17/api_categories.csv')
+# api_info <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-17/api_info.csv')
+# api_logos <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-17/api_logos.csv')
+# api_origins <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-17/api_origins.csv')
+# apisguru_apis <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-17/apisguru_apis.csv')
+```
+
+
+```{r summary}
+
+skimr::skim(api_categories)
+
+api_categories |> 
+  group_by(name) |> 
+  count() |> 
+  arrange(desc(n))
+
+skimr::skim(api_origins)
+
+api_origins |> 
+  group_by(name) |> 
+  count() |> 
+  arrange(desc(n))
+
+
+skimr::skim(apisguru_apis)
+
+length(unique(apisguru_apis$name))
+```
+
+
+```{r process-updates}
+
+tz(apisguru_apis$updated)   ## UTC time zone
+
+# create column of date only
+apisguru_apis <-  apisguru_apis |> 
+  mutate(added_dte = as.Date(apisguru_apis$added, tz = "UTC"),
+         updated_dte = as.Date(apisguru_apis$updated, tz = "UTC"),
+         diff_dte = updated_dte - added_dte,
+         added_yr = lubridate::year(added_dte)
+         )
+
+
+summary(apisguru_apis$diff_dte)
+range(apisguru_apis$diff_dte)
+
+```
+
+```{r eda-update-diff}
+
+apisguru_apis |> 
+  ggplot(aes(x = diff_dte,
+             y = factor(added_yr))) + 
+  geom_density_ridges()
+
+```
+
+```{r density-diff}
+
+# density with data points
+apisguru_apis |> 
+  ggplot(aes(x = diff_dte,
+             y = factor(added_yr))) +
+  
+  ggridges::geom_density_ridges(rel_min_height = 0.01, jittered_points = TRUE,
+                      position = position_points_jitter(width = 0.5, height = 0),
+                      point_shape = "|", point_size = 2,
+                      alpha = 0.7)
+  
+  
+# histo density
+ apisguru_apis |> 
+  ggplot(aes(x = diff_dte,
+             y = factor(added_yr),
+             height = ..density..
+             )) +
+  
+  ggridges::geom_density_ridges(stat = "binline", 
+                      binwidth = 3,
+                      draw_baseline = F) 
+ 
+ 
+ apisguru_apis |> 
+  ggplot(aes(x = diff_dte,
+             y = factor(added_yr))) +
+   
+   ggdist::geom_dots() + 
+   theme_classic()
+   
+  
+
+```
+
+
+```{r density-pretty, fig.height=6}
+
+set.seed(1234)
+
+ apisguru_apis |> 
+  ggplot(aes(x      = diff_dte,
+             y      = factor(added_yr),
+             fill   = factor(added_yr))) +
+  
+  geom_dots(binwidth = unit(c(1.5, Inf), "mm"), 
+            overflow = "compress", 
+            alpha = 0.75,
+            side  = "both",
+            linewidth = 0) + 
+   
+   scale_x_continuous(limits = c(0, 3000),
+                     breaks = seq(0, 3000, 500)) + 
+
+
+   labs(y        = "Year API added",
+        x        = "Difference between added and updated (days)",
+        title    = "API specs",
+        subtitle = "How timely are API updates?",
+        fill     = "Year API added") + 
+   
+   scale_colour_manual(values = randomcoloR::distinctColorPalette(k = 10)) + 
+  
+   theme_classic() + 
+  
+   theme(
+    
+    axis.title.x = element_text(hjust = 0.5, 
+                                vjust = -2),
+        
+    axis.title.y = element_text(hjust = 0.5, 
+                                vjust = 4),
+  ) + 
+   coord_flip()
+
+ 
+ ggsave(filename = "../figs/apis.jpeg",
+        plot  = last_plot())
+
+```
+
+<br>
+
+
+```{r density-pretty-update, fig.height=6}
+
+set.seed(1234)
+
+ apisguru_apis |> 
+  ggplot(aes(x      = diff_dte,
+             y      = factor(added_yr),
+             fill   = factor(added_yr))) +
+   
+   geom_point() +
+   
+   geom_rug() + 
+ 
+   geom_dots(binwidth = unit(c(1.5, Inf), "mm"),
+            overflow = "compress",
+            alpha = 0.75,
+            side  = "both",
+            linewidth = 0) +
+
+   scale_x_continuous(limits = c(0, 3000),
+                     breaks = seq(0, 3000, 500)) + 
+
+
+   labs(y        = "Year API added",
+        x        = "Difference between added and updated (days)",
+        title    = "API specs",
+        subtitle = "How timely are API updates?") + 
+   
+   scale_colour_manual(values = randomcoloR::distinctColorPalette(k = 10)) + 
+  
+   theme_classic() + 
+  
+   theme(
+    
+    axis.title.x = element_text(hjust = 0.5, 
+                                vjust = -2),
+        
+    axis.title.y = element_text(hjust = 0.5, 
+                                vjust = 4),
+    
+    legend.position = "none"
+  ) + 
+   coord_flip()
+
+
+```
+
+
+```{r density-pretty-update-shape, fig.height=6}
+
+set.seed(1234)
+
+# Select a qualitative palette 
+display.brewer.all(n=9)
+
+
+ apisguru_apis |> 
+  ggplot(aes(x      = diff_dte,
+             y      = factor(added_yr),
+             colour   = factor(added_yr))) +
+   
+   geom_point(shape = "-",
+              size = 4) +
+   
+
+   scale_x_continuous(limits = c(0, 3000),
+                     breaks = seq(0, 3000, 500)) + 
+
+
+   labs(y        = "Year API added",
+        x        = "Difference between added and updated (days)",
+        title    = "API specs",
+        subtitle = "How timely are API updates?") + 
+   
+   # scale_colour_manual(values = randomcoloR::distinctColorPalette(k = 10)) + 
+   
+   scale_color_brewer(palette = 'Set1') + 
+  
+   theme_classic() + 
+  
+   theme(
+    
+    axis.title.x = element_text(hjust = 0.5, 
+                                vjust = -2),
+        
+    axis.title.y = element_text(hjust = 0.5, 
+                                vjust = 4),
+    
+    legend.position = "none"
+  ) + 
+   coord_flip()
+
+ggsave(filename = "../figs/apis_rug.jpeg",
+        plot  = last_plot())
+ 
+
+```
+
+
+
+
+
+## END

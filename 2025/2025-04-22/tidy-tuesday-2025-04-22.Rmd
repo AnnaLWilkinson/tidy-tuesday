@@ -1,0 +1,308 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_effective_care.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-04-22"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-15/readme.md
+
+
+**Fatal Car Crashes on 4/20**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis,
+               rlang,
+               ggsci,
+               patchwork
+               )
+```
+
+```{r import}
+
+# # Using R
+# # Option 1: tidytuesdayR R package 
+# ## install.packages("tidytuesdayR")
+# 
+# #tuesdata <- tidytuesdayR::tt_load('2025-04-22')
+# ## OR
+# tuesdata <- tidytuesdayR::tt_load(2025, week = 16)
+# 
+# daily_accidents <- tuesdata$daily_accidents
+# daily_accidents_420 <- tuesdata$daily_accidents_420
+# 
+# # Option 2: Read directly from GitHub
+# 
+# #daily_accidents <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-22/daily_accidents.csv')
+# #
+# daily_accidents_420 <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-22/daily_accidents_420.csv')
+```
+
+```{r src}
+
+# cleaning script for data on all crashes - run to fetch data - exports and saves data
+
+#source("code/tt_fatal_car_crashes_cleaning_script")
+
+```
+
+```{r import-saved}
+
+# import data after running script file to fetch from TT GitHub
+all_accidents <-  rio::import(here::here("data", "all_accidents.RData"))
+
+```
+
+
+```{r summary-all}
+
+summary(all_accidents)
+
+```
+
+```{r group-by-date}
+
+#group_by date, age, sex & count
+
+all_accidents |> 
+  group_by(date, age_group, sex) |> 
+  count()
+
+```
+
+
+```{r eda-age-sex-date}
+
+# explore time series of accidents by date, year and sex for recent period only 
+# the whole data set is large
+
+all_accidents |> 
+  filter(period == "Recent (2004-2016)") |> 
+  filter(year %in% c(2014:2016)) |> 
+  group_by(year,date,sex) |> 
+  count() |> 
+  
+  ggplot() + 
+  # geom_point(aes(x = date, 
+  #              y = n, 
+  #              group = sex,
+  #              colour = sex)) +
+  geom_line(aes(x = date, 
+               y = n, 
+               group = sex,
+               colour = sex)) +
+  
+  scale_x_date(date_breaks = "month") +
+  
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90)
+  ) + 
+  
+  facet_wrap(~year, scales = "free", nrow = 2)
+
+```
+<br>
+
+There is a lot of data in the whole accidents data set.
+
+To answer the questions of a signal from days, cut the data down to one year.
+
+There is a clear difference between sexes, so I want to split the plots by sex.
+
+<br>
+
+
+
+```{r eda-2016}
+
+all_accidents |> 
+  drop_na(sex) |> 
+  filter(year == 2016) |> 
+  group_by(date,sex) |> 
+  count() |> 
+  ungroup() |> 
+  arrange(-n) 
+
+all_accidents |> 
+  drop_na(sex) |> 
+  filter(year == 2016) |> 
+  group_by(date,sex) |> 
+  summarise(n = n()) |> 
+  ungroup() |> 
+  group_by(sex) |> 
+  summarise(q3 = quantile(n, 0.75))
+```
+
+```{r plot-men-2016}
+
+## men 
+plot_men_2016 <- all_accidents |> 
+  drop_na(sex) |> 
+  filter(year == 2016) |> 
+  filter(sex == "M") |> 
+  group_by(date) |> 
+  count() |> 
+  
+  ggplot(aes(x = date, 
+             y = n))+ 
+
+  geom_point( colour = "#0072B2") + 
+  
+  gghighlight::gghighlight(n > quantile(n, prob = 0.98), use_direct_label = FALSE) + 
+  
+  geom_text(aes(label = date),
+             size = 3,
+             hjust = -0.25,
+             vjust = 0.35,
+             angle = 55) + 
+  
+  scale_x_date(date_breaks = "1 week", 
+               expand = c(0.05,0)) +
+  
+  scale_y_continuous(limits = c(0, 250)) + 
+  
+  labs(x = "",
+       y = "Count of fatal crashes (n)",
+       title = "Men",
+       caption = "Dates in the top 2% of total crashes in a day highlighted") +
+  
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, 
+                               size = 6),
+    
+    legend.position = "bottom",
+    
+    panel.grid.major.x = element_blank(),
+    
+  ) 
+plot_men_2016
+  
+```
+
+
+```{r plot-women-2016}
+
+## women 
+plot_women_2016 <-  all_accidents |> 
+  drop_na(sex) |> 
+  filter(year == 2016) |> 
+  filter(sex == "F") |> 
+  group_by(date) |> 
+  count() |> 
+  
+  ggplot(aes(x = date, 
+             y = n))+ 
+
+  geom_point(colour = "#D55E00") + 
+  
+  gghighlight::gghighlight(n > quantile(n, prob = 0.98), use_direct_label = FALSE) + 
+  
+  geom_text(aes(label = date),
+             size = 3,
+             hjust = -0.25,
+             vjust = 0.35,
+             angle = 55) + 
+  
+  scale_x_date(date_breaks = "1 week", 
+               expand = c(0.05,0)) +
+  
+  scale_y_continuous(limits = c(0, 250)) + 
+  
+  labs(x = "",
+       y = "Count of fatal crashes (n)",
+       title = "Women") +
+  
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, 
+                               size = 6),
+    
+    legend.position = "bottom",
+    
+    panel.grid.major.x = element_blank(),
+    
+  ) 
+plot_women_2016
+  
+```
+
+
+
+```{r patchwork-plots, fig.height=8, fig.width=11}
+
+plot_women_2016 + plot_men_2016 +
+  
+  plot_layout(ncol = 1,
+              axes = "collect") + 
+  plot_annotation(title = "Fatal accidents in 2016 by date",
+                  subtitle = "Is April 20th a day for fatal crashes?")
+
+ggsave(filename = "../figs/FatalCarCrashes.jpeg", 
+       plot = last_plot(), 
+       dpi = 300,
+       width = 14,
+       height = 16,
+       units = "cm"
+       )
+
+```
+
+
+## END
+
+
+
+
+
+
+
+
+
+

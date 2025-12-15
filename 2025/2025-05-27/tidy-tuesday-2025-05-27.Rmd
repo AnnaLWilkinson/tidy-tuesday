@@ -1,0 +1,271 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'dungeons_dragons.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-05-27"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-15/readme.md
+
+
+**Dungeons and Dragons Monsters**  
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               RColorBrewer,
+               randomcoloR
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-05-27')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 21)
+
+monsters <- tuesdata$monsters
+
+# Option 2: Read directly from GitHub
+
+#monsters <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-05-27/monsters.csv')
+```
+
+```{r summary}
+summary(monsters)
+
+length(unique(monsters$name))
+length(unique(monsters$category))
+length(unique(monsters$type))
+length(unique(monsters$alignment))
+```
+
+
+```{r process-language}
+
+with(monsters, table(languages, useNA= 'always'))
+
+monsters_processed <-  monsters |> 
+  mutate(languages = str_replace_all(languages, ";", ","),
+         languages = str_replace_all(languages, "plus", ",")) |> 
+  separate_wider_delim(languages, delim = (","), 
+                       names = c("language_one" , "language_two", "language_three", "language_four"),
+                       too_few  = "debug",
+                       too_many = "debug") 
+
+monsters_processed <-  monsters_processed |> 
+  mutate(language_one = str_remove_all(language_one, "[()]"))
+
+
+```
+
+```{r eda-language}
+
+monsters_processed |> 
+  filter(language_one != "None") |> 
+  group_by(language_one) |> 
+  ungroup() |> 
+  group_by(language_one, type) |> 
+  count() |> 
+  ungroup() |> 
+  group_by(language_one) |> 
+  mutate(n_rows = sum(n)) |> 
+  ungroup() |> 
+  
+  ggplot() +
+  
+  geom_bar(aes(x = reorder(language_one, -n_rows),
+               y = n, 
+               fill = type),
+           stat = "identity") + 
+  
+  scale_fill_manual(values = randomcoloR::distinctColorPalette(k = 15)) + 
+  
+  labs(x    = "", 
+       y    = "Count(n)",
+       fill = "Type of creature") + 
+  
+  coord_flip()  + 
+  
+  theme_minimal()
+
+
+```
+
+
+```{r eda-numeric}
+
+
+monsters |> 
+  select(str, 
+         dex,
+         con,
+         int,
+         wis,
+         cha) |> 
+  GGally::ggpairs()
+
+```
+
+```{r eda-wisdom}
+
+monsters |> 
+  ggplot() + 
+  geom_point(aes(x = wis,
+                 y = cha)) + 
+  
+  theme_classic()
+
+```
+
+```{r eda-wisdom-cha-int}
+
+monsters |> 
+  ggplot() + 
+  geom_point(aes(x = wis,
+                 y = cha,
+                 size = int)) + 
+  
+  theme_classic()
+
+```
+
+```{r add-colour}
+
+grDevices::colorRampPalette(c("orange", "green"))(8)
+
+monsters |> 
+  ggplot() + 
+  geom_point(aes(x = wis,
+                 y = cha,
+                 size = int,
+                 colour = int)) + 
+  
+  scale_colour_gradient(low = "orange", 
+                        high = "green",
+                        guide = "legend") + 
+  
+  labs(x      = "Wisdom", 
+       y      = "Charisma", 
+       size   = "Intelligence",
+       colour = "Intelligence") + 
+  
+  theme_classic()
+```
+
+```{r change-colour}
+
+monsters |> 
+  ggplot() + 
+  geom_jitter(aes(x = wis,
+                 y = cha,
+                 size = int,
+                 colour = int),
+              width  = .25,
+              alpha = .7) + 
+  
+  scale_colour_gradient(low = "lightblue", 
+                        high = "navy",
+                        guide = "legend") + 
+  
+  scale_y_continuous(expand = c(0.05,0.05),
+                     breaks = seq(0,30, 5),
+                     limits = c(0, 30)) + 
+  
+  scale_x_continuous(limits = c(0,30),
+                     breaks = seq(0,30, 5)) + 
+  
+  labs(x      = "Wisdom", 
+       y      = "Charisma", 
+       size   = "Intelligence",
+       colour = "Intelligence",
+       title = "Dungeons and Dragons", 
+       subtitle = "Are creatures who are charismatic also wise and also intelligent?") + 
+  
+  theme_classic() + 
+  
+  theme(
+    
+    panel.grid.major = element_line(colour = "lightgrey")
+    
+  )
+
+
+ggsave(
+  filename = "../figs/dungons_dragons.jpeg", 
+  plot = last_plot()
+)
+
+```
+
+
+//END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

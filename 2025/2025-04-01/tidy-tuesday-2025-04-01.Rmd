@@ -1,0 +1,220 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- 'output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'pokemon.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-04-01"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-01/readme.md
+
+
+**Pokemon**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis
+               )
+```
+
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-04-01')
+## OR
+tuesdata <- tidytuesdayR::tt_load(2025, week = 13)
+
+pokemon_df <- tuesdata$pokemon_df
+
+```
+
+
+
+```{r summary}
+
+skimr::skim(pokemon_df)
+summary(pokemon_df)
+
+```
+
+```{r exploratory-plots}
+
+pokemon_df |> 
+  select(egg_group_1, is.numeric, -id, -species_id, -generation_id) |> 
+  pivot_longer(height:speed,
+               names_to = "stat",
+               values_to = "values") |> 
+ggplot(aes(x = reorder(egg_group_1,-values),
+           y = values, 
+           colour = egg_group_1,
+           fill = egg_group_1)) + 
+  geom_boxplot() +
+  scale_colour_manual(values = pals::alphabet(n=15)) + 
+  theme_minimal() +
+  theme(
+  
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    legend.position = "none") + 
+      
+  facet_wrap(~ stat, scales = "free_y")
+  
+
+```
+
+```{r distributions}
+
+pokemon_df |> 
+  ggplot() + 
+  geom_density(aes(x = attack)) + 
+  geom_density(aes(x = defense))
+
+pokemon_df |> 
+  ggplot() + 
+  geom_density(aes(x = weight))
+
+pokemon_df |> 
+  ggplot() + 
+  geom_density(aes(x = base_experience))
+
+pokemon_df |> 
+  ggplot() + 
+  geom_density(aes(x = speed))
+
+```
+
+```{r quantile-speed}
+
+quantile(pokemon_df$speed)
+
+ntile(pokemon_df$speed, 6)
+
+gtools::quantcut(pokemon_df$speed, q = 6)
+
+pokemon_df <- pokemon_df |> 
+  mutate(speed_quantile = gtools::quantcut(pokemon_df$speed, q = 6))
+
+with(pokemon_df, table(speed_quantile))
+
+pokemon_df |> 
+  group_by(speed_quantile) |> 
+  summarise(mean = mean(speed),
+            min = min(speed),
+            max = max(speed))
+
+```
+
+```{r plot-attack-defense-speed}
+
+pokemon_df |> 
+  ggplot() +
+  geom_point(aes(x = attack,
+                 y = defense,
+                 )) + 
+  theme_minimal() + 
+  facet_wrap( ~ speed_quantile)
+
+
+```
+```{r pretty-up}
+levels(pokemon_df$speed_quantile)
+# reminder - [ means range is inclusive, ( means range is exclusive
+
+speed_names <- as_labeller(c(
+  `[5,40]`    = "speed 5-40",
+  `(40,54]`   = "speed 41-54"  ,
+  `(54,65]`   = "speed 55-65"  ,
+  `(65,84]`   = "speed 66-84"  ,
+  `(84,100]`  = "speed 85-100" ,
+  `(100,180]` = "speed 101-180"
+))
+
+speed_names
+
+pokemon_df |> 
+  
+  ggplot() +
+  geom_point(aes(x = attack,
+                 y = defense,
+                 colour = attack
+                 )) + 
+  
+  scale_colour_viridis(option = "magma") + 
+  
+  theme_minimal() + 
+  
+  theme(
+    
+    legend.position = "none"
+  ) + 
+  
+  labs(x = "Attack points",
+       y = "Defense points",
+       title = "Pokemon",
+       subtitle = "Do attack points increase as defense points increase & 
+       is speed an effect modifier?") + 
+  
+  facet_wrap( ~ speed_quantile, labeller = speed_names)
+
+ggsave(filename = "figs/pokemon.jpeg",
+       plot = last_plot(), 
+       dpi = 300, 
+       width = 14,
+       height = 12,
+       units =  "cm")
+       
+```
+
+
+## END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

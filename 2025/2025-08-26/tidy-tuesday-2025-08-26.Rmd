@@ -1,0 +1,332 @@
+
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'billboard_numberones.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-08-26"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-08-26/readme.md
+
+
+**Billboard Hot 100 Number Ones**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-08-26')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 34)
+
+billboard <- tuesdata$billboard
+topics <- tuesdata$topics
+
+# # Option 2: Read directly from GitHub
+# 
+# billboard <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-26/billboard.csv')
+# topics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-26/topics.csv')
+
+```
+
+
+```{r summary}
+summary(billboard)
+summary(topics)
+```
+
+```{r eda-weeks}
+
+billboard |> 
+  select(weeks_at_number_one, 
+         bpm, 
+         energy, 
+         danceability,
+         happiness, 
+         loudness_d_b) |> 
+  GGally::ggpairs()
+```
+
+
+```{r eda-energy}
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = loudness_d_b, 
+                 y = energy,
+                 size = weeks_at_number_one))
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = loudness_d_b, 
+                 y = energy,
+                 colour = cdr_genre))
+
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = loudness_d_b, 
+                 y = energy,
+                 colour = front_person_age))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = loudness_d_b, 
+                 y = energy,
+                 colour = bpm))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = loudness_d_b, 
+                 y = energy,
+                 colour = factor(bass_based)))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = loudness_d_b, 
+                 y = energy,
+                 colour = factor(associated_with_dance)))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = danceability, 
+                 y = happiness,
+                 colour = factor(written_for_a_film)))
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = danceability, 
+                 y = happiness,
+                 colour = weeks_at_number_one))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = danceability))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = happiness))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = energy))
+
+
+billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = loudness_d_b))
+
+```
+
+
+
+
+```{r panel-weeks-at-number-one, warning = FALSE}
+
+lapis_lazuli   <-  "#33658A"
+hunyadi_yellow <-  "#F6AE2D"
+moss_green     <-  "#758E4F"
+bittersweet    <-  "#FF5E5B"
+
+
+p1 <- billboard |> 
+  ggplot() + 
+  geom_jitter(aes(x = weeks_at_number_one, 
+                 y = danceability),
+              size = 2,
+              width = .25,
+              height = 1,
+              alpha = .5,
+              colour = lapis_lazuli) +
+  scale_y_continuous(limits = c(0, 100),
+                     expand = c(0,0)) + 
+  scale_x_continuous(limits = c(0, 20),
+                     expand = c(0,0)) + 
+  
+  labs(y = "Danceability") + 
+  
+  theme_classic() + 
+  
+  theme(
+    
+    panel.grid.major = element_line(colour = "lightgrey"),
+   #aspect.ratio = 1
+  )
+
+
+p2 <- billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = happiness),
+              size = 2,
+              width = .25,
+              height = 1,
+              alpha = .5,
+              colour = moss_green) +
+  scale_y_continuous(limits = c(0, 100),
+                     expand = c(0,0)) + 
+  scale_x_continuous(limits = c(0, 20),
+                     expand = c(0,0)) + 
+  
+  labs(y = "Happiness") + 
+  
+  theme_classic() + 
+  
+  theme(
+    
+    panel.grid.major = element_line(colour = "lightgrey"),
+    #aspect.ratio = 1
+  )
+
+
+p3 <- billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = energy),
+              size = 2,
+              width = .25,
+              height = 1,
+              alpha = .5,
+              colour = hunyadi_yellow) +
+  scale_y_continuous(limits = c(0, 100),
+                     expand = c(0,0)) + 
+  scale_x_continuous(limits = c(0, 20),
+                     expand = c(0,0)) + 
+  
+  labs(y = "Energy") + 
+  
+  theme_classic() + 
+  
+  theme(
+    
+    panel.grid.major = element_line(colour = "lightgrey"),
+   # aspect.ratio = 1
+  )
+
+
+p4 <- billboard |> 
+  ggplot() + 
+  geom_point(aes(x = weeks_at_number_one, 
+                 y = loudness_d_b), 
+              size = 2,
+              width = .25,
+              height = 1,
+              alpha = .5,
+              colour = bittersweet) +
+  scale_y_continuous(limits = c(-30, 0), 
+                     expand = c(0,0)) + 
+  
+  scale_x_continuous(limits = c(0, 20),
+                     expand = c(0,0)) + 
+  
+  labs(y = "Loudness",
+       caption = "Loudness measured in decibels as provided by Spotify") + 
+  
+  theme_classic() + 
+  
+  theme(
+    
+    panel.grid.major = element_line(colour = "lightgrey"),
+    #aspect.ratio = 1
+  )
+
+
+(p1 + p2) + plot_layout(ncol = 1, axes = "collect")
+
+p1 / p2 + plot_layout(axis_title = "collect")
+
+(p1 + p2 + p3 + p4)  +
+  patchwork::plot_annotation(title = "Billboard Number Ones") + 
+  plot_layout(axis_titles  = "collect_x")
+## -> fixed aspect ratio overrides the collect axes in patchwork
+
+# create a list of the plots
+plots_list <-  list(p1, p2, p3, p4)
+
+patchwork::wrap_plots(plots_list,
+                      nrow = 2, 
+                      ncol = 2,
+                      axes = "collect_x") + 
+  patchwork::plot_annotation(title = "Billboard Number Ones") &
+  labs(x = "Weeks at number one") 
+
+
+ggsave(filename = "../figs/billboard.jpeg",
+       plot = last_plot())
+```
+
+
+
+
+
+

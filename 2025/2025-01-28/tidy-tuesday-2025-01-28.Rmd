@@ -1,0 +1,210 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: hide
+date: "2025-01-28"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-01-28/readme.md
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               lubridate,
+               gtsummary,
+               tidytuesdayR,
+               tidycensus, 
+               sf,
+               scales,
+               colorspace
+               )
+```
+
+```{r load-data}
+tuesdata <- tidytuesdayR::tt_load('2025-01-28')
+
+water_insecurity_2022 <- tuesdata$water_insecurity_2022
+water_insecurity_2023 <- tuesdata$water_insecurity_2023
+```
+
+```{r clean-script-supplied}
+
+# Clean data compiled from code referenced in article (https://waterdata.usgs.gov/blog/acs-maps/). 
+# Code was revised to pull data for all US counties for years 2022 - 2023.
+
+# Helper functions -----
+get_census_data <- function(geography, var_names, year, proj, survey_var) {
+  df <- get_acs(
+    geography = geography,
+    variable = var_names,
+    year = year,
+    geometry = TRUE,
+    survey = survey_var) |>
+    clean_names() |>
+    st_transform(proj) |>
+    mutate(year = year)
+  
+  return(df) 
+}
+
+# Grab relevant variables - B01003_001: total population, B25049_004: households lacking plumbing----
+vars <- c("B01003_001", "B25049_004")
+
+# Pull data for 2023 and 2022 for all US counties ------
+water_insecurity_2023 <- get_census_data(
+  geography = 'county', 
+  var_names = vars, 
+  year = "2023", 
+  proj = "EPSG:5070", 
+  survey_var = "acs1"
+) |>
+  mutate(
+    variable_long = case_when(
+      variable == "B01003_001" ~ "total_pop",
+      variable == "B25049_004" ~ "plumbing",
+      .default = NA_character_  
+    )
+  ) |> 
+  select(geoid, name, variable_long, estimate, geometry, year) |> 
+  pivot_wider(
+    names_from = variable_long,
+    values_from = estimate
+  ) |> 
+  mutate(
+    percent_lacking_plumbing = (plumbing / total_pop) * 100
+  )
+
+water_insecurity_2022 <- get_census_data(
+  geography = 'county', 
+  var_names = vars, 
+  year = "2022", 
+  proj = "EPSG:5070", 
+  survey_var = "acs1"
+) |>
+  mutate(
+    variable_long = case_when(
+      variable == "B01003_001" ~ "total_pop",
+      variable == "B25049_004" ~ "plumbing",
+      .default = NA_character_  
+    )
+  ) |> 
+  select(geoid, name, variable_long, estimate, geometry, year) |> 
+  pivot_wider(
+    names_from = variable_long,
+    values_from = estimate
+  ) |> 
+  mutate(
+    percent_lacking_plumbing = (plumbing / total_pop) * 100
+  )
+
+```
+
+```{r}
+summary(water_insecurity_2022)
+summary(water_insecurity_2023)
+```
+
+```{r bind}
+
+water_insecurity_2022_df <-  water_insecurity_2022 |> 
+  sf::st_drop_geometry(water_insecurity_2022) 
+
+water_insecurity_2023_df <-  water_insecurity_2023 |> 
+  sf::st_drop_geometry(water_insecurity_2023)
+
+my_water_insecurity <-  bind_rows(water_insecurity_2022_df, water_insecurity_2023_df)
+
+```
+
+```{r reshape}
+
+my_water_insecurity_wide <-  my_water_insecurity |> 
+  select(name, 
+         year,
+         percent_lacking_plumbing) |> 
+  arrange(name, year) |> 
+  pivot_wider(id_cols = name, 
+              names_from = year, 
+              values_from = percent_lacking_plumbing)
+
+```
+
+```{r percent-change}
+names(my_water_insecurity_wide)
+my_water_insecurity_wide <-  my_water_insecurity_wide |> 
+  rename(pct_lack_plum_2022 = `2022`, 
+         pct_lack_plum_2023 = `2023`,
+         )
+
+my_water_insecurity_wide <-  my_water_insecurity_wide |> 
+  mutate(change = pct_lack_plum_2023 -pct_lack_plum_2022)
+
+```
+
+```{r str-split-name}
+
+my_water_insecurity_wide <- my_water_insecurity_wide |> 
+  separate_wider_delim(name, 
+                       ",",
+                       names = c("county_name", "county_state"))
+
+```
+
+```{r plot, warning = FALSE, include = TRUE}
+
+my_water_insecurity_wide |> 
+  ggplot() + 
+  geom_jitter(aes(x = factor(county_state), 
+                  y = change,
+                  colour = change),
+              position = position_jitter(width = 0.01, 
+                                         height = 0.1)) + 
+  geom_hline(yintercept = 0, 
+             linetype = "dashed", 
+             size = 0.5, 
+             colour = "red") + 
+  scale_x_discrete(expand = c(0.02,0.02)) +
+  scale_colour_continuous_sequential(palette = "Blues 3",
+                                     rev = TRUE,
+                                     guide = "colourbar") + 
+  scale_y_continuous(limits = c(-0.8, 0.8),
+                     breaks = seq(-0.8, 0.8, 0.4)) + 
+  scale_color_continuous(limits = c(-0.8, 0.8), 
+                         breaks = seq(-0.8, 0.8, 0.4)) + 
+  theme_classic() +
+  theme(
+    
+    axis.text.x = element_text(angle = 90, 
+                               size = 8,
+                               hjust = 1,
+                               vjust = 0.25)
+  ) + 
+  labs(x = "", 
+       y = "Change in percentage",
+       title = "Comparing 2022 and 2023 in percentage of population lacking plumbing facilities",
+       caption = "Observations/Dots are counties, within states",
+       colour = "Change in %") 
+  
+```
+
+
+
+

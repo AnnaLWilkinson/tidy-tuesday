@@ -1,0 +1,132 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: show
+date: "2025-03-18"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-03-18/readme.md
+
+
+**Palm trees*8
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales
+               )
+```
+
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-03-18')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 10)
+
+palmtrees <- tuesdata$palmtrees
+
+```
+
+
+```{r summary}
+
+summary(palmtrees)
+```
+```{r eda-palmtribe}
+
+palmtrees |> 
+  group_by(palm_tribe) |> 
+  count() |> 
+   ggplot() + 
+    geom_bar(aes(x = reorder(palm_tribe,-n), 
+               y = n),
+           stat = "identity") + 
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+```{r eda-stemheight}
+
+erect_names <- list('both' = 'Both erect and non-rect stem',
+                    'erect' = 'Erect stem',
+                    'non-erect' = 'Non-erect stem')
+
+erect_labeller <-  function(variable, value) {
+  return(erect_names[value])
+}
+
+
+palmtrees |> 
+   ggplot(aes(x = reorder(palm_subfamily,max_leaf_number), 
+              y = max_leaf_number,
+              colour = erect)) +
+    geom_boxplot() +
+    geom_jitter(aes(colour = erect),
+                alpha = 0.1) +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0,100)) + 
+  scale_colour_manual(values = c("#2a8158","#1d5a3e", "#0d271a" )) +
+    facet_wrap(~erect, labeller = erect_labeller) +
+    theme_minimal() + 
+  
+     theme(
+    
+    axis.text.x = element_text(angle = 90),
+    legend.position = "none"
+  ) + 
+  labs(x = "Palm subfamily", 
+       y = "Maximum leaf number",
+       title = "Palm trees",
+       subtitle = "Is there a difference in leaf number by palm sub family?", 
+       caption = "Erect is whether palm species has an erect stem 
+       (rather than an acaulescent or climbing growth form) or not, 
+       or both if local populations vary in this trait.")
+
+ggsave(plot = last_plot(),
+       "Palmtrees.jpeg", 
+       dpi = 300,
+       width = 35, 
+       height = 30, 
+       units = "cm")
+
+
+```
+
+
+# END
+
+
+
+
+
+
+
+

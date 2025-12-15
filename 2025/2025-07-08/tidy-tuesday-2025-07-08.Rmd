@@ -1,0 +1,198 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'xkcd_color_survey.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-07-08"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-08/readme.md
+
+
+**xkcd Color Survey Results**
+
+
+https://blog.xkcd.com/2010/05/03/color-survey-results/
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-07-08')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 27)
+
+answers <- tuesdata$answers
+color_ranks <- tuesdata$color_ranks
+users <- tuesdata$users
+
+# Option 2: Read directly from GitHub
+
+# answers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-08/answers.csv')
+# color_ranks <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-08/color_ranks.csv')
+# users <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-08/users.csv')
+```
+
+
+```{r summary}
+
+summary(answers)
+summary(color_ranks)
+summary(users)
+
+```
+
+```{r join}
+
+color_ranks_link <-  color_ranks |> 
+  select(color, rank) |> 
+  filter(rank %in% c(1:5))
+
+answers_join <-  left_join(answers, color_ranks_link, by = "rank")
+
+answers_join |> 
+  group_by(color) |> 
+  count()
+
+
+```
+
+```{r spam}
+
+users |> 
+  ggplot() +
+  geom_density(aes(x = spam_prob))
+
+```
+
+
+```{r color-blind}
+
+users |> 
+  ggplot() +
+  geom_bar(aes(x = factor(colorblind)),
+           stat = "count")
+
+```
+
+
+```{r users}
+
+# join in spam prob
+spam_prob <- users |> 
+  select(user_id, spam_prob)
+
+my_users <- answers |> 
+  group_by(user_id) |> 
+  count() 
+
+
+my_users <- left_join(my_users, spam_prob, by = "user_id")
+
+```
+
+```{r eda-spam}
+
+my_users |> 
+  ggplot() + 
+  geom_point(aes(y = n,
+                 x = spam_prob))
+
+```
+
+```{r pretty-spam}
+
+my_users |> 
+  ggplot() + 
+  geom_point(aes(y = n,
+                 x = spam_prob,
+                 colour = spam_prob),
+             alpha = 0.5) + 
+  
+  labs(title = "xkcd Color Survey",
+       subtitle = "Do more surveys mean more likely to be spam?",
+       x = "Probability of the user being spam user",
+       y = "Count of surveys by the user (n)") +
+  
+  viridis::scale_color_viridis(option = "D", direction = -1) + 
+  
+  theme_light() + 
+  
+  theme(aspect.ratio = 1,
+        legend.position = "none")
+
+
+ggsave(filename = "../figs/color_survey.jpeg",
+       plot = last_plot())
+
+```
+
+## END
+
+
+
+
+
+
+
+
+
+
+
+

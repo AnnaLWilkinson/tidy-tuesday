@@ -1,0 +1,251 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_effective_care.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-04-08"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-15/readme.md
+
+
+**Base R Penguins**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis,
+               rlang,
+               ggsci
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+# 
+# tuesdata <- tidytuesdayR::tt_load('2025-04-15')
+# ## OR
+# tuesdata <- tidytuesdayR::tt_load(2025, week = 15)
+# 
+# penguins <- tuesdata$penguins
+# penguins_raw <- tuesdata$penguins_raw
+
+# Option 2: Read directly from GitHub
+
+penguins <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-15/penguins.csv')
+penguins_raw <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-15/penguins_raw.csv')
+
+```
+
+
+
+```{r summary}
+
+summary(penguins_raw)
+summary(penguins)
+
+```
+
+```{r plot-numeric}
+
+# density plot function 
+
+density_plot <-  function(df, x_var, y_var) {
+  
+ plot <-  df |> 
+   
+  ggplot() +
+   
+  geom_density(aes(x = !!ensym(x_var),
+                   fill = !!ensym(y_var)),
+               alpha = 0.6) +
+   
+  ggsci::scale_fill_bmj() + 
+   
+  theme_minimal()
+  
+  return(plot)
+}
+
+# bill length 
+density_plot(df = penguins, x_var = bill_len, y_var = sex)
+density_plot(df = penguins, x_var = bill_len, y_var = species)
+
+# bill depth
+density_plot(df = penguins, x_var = bill_dep, y_var = sex)
+density_plot(df = penguins, x_var = bill_dep, y_var = species)
+
+# flipper length
+density_plot(df = penguins, x_var = flipper_len, y_var = sex)
+density_plot(df = penguins, x_var = flipper_len, y_var = species)
+
+# body mass
+density_plot(df = penguins, x_var = body_mass, y_var = sex)
+density_plot(df = penguins, x_var = body_mass, y_var = species)
+
+
+penguins |> 
+  select(species, bill_len, bill_dep, flipper_len, body_mass) |> 
+  pivot_longer(bill_len:body_mass,
+               names_to = "stat",
+               values_to = "values") |> 
+  ggplot() +
+  geom_boxplot(aes(x = species, 
+               y = values,
+               fill = species),
+               alpha = 0.6) +
+  
+  geom_jitter(aes(x = species, 
+               y = values,
+               fill = species),
+              alpha = 0.2) + 
+  
+  scale_fill_lancet() + 
+  
+  theme_minimal() +
+  
+  facet_wrap(~ stat, scales = "free_y")
+
+
+penguins |> 
+  select(sex, bill_len, bill_dep, flipper_len, body_mass) |> 
+  pivot_longer(bill_len:body_mass,
+               names_to = "stat",
+               values_to = "values") |> 
+  
+  ggplot() +
+  
+  geom_boxplot(aes(x = sex, 
+               y = values,
+               fill = sex),
+               alpha = 0.6) +
+  
+  geom_jitter(aes(x = sex, 
+               y = values,
+               fill = sex),
+              alpha = 0.2) + 
+  
+  scale_fill_lancet() + 
+  
+  theme_minimal() +
+  
+  facet_wrap(~ stat, scales = "free_y")
+
+
+```
+
+```{r penguin-is-eda}
+
+penguins |> 
+  group_by(species, island) |> 
+  tally()
+
+```
+
+```{r mass-flip}
+
+
+penguins |> 
+  drop_na(sex) |> 
+  ggplot() + 
+  
+  geom_point(aes(x      = flipper_len, 
+                 y      = body_mass, 
+                 colour = interaction(species, sex),
+                 shape  = interaction(species, sex)),
+             size = 1.7) + 
+  
+  scale_colour_bmj(labels = c("Adelie, f",
+                              "Chinstrap, f",
+                              "Gentoo, f",
+                              "Adelie, m", 
+                              "Chinstrap, m", 
+                              "Gentoo, m")) +
+
+  scale_shape_manual(values = c(15,15,15,17,17,17),
+                     labels = c("Adelie, f",
+                              "Chinstrap, f",
+                              "Gentoo, f",
+                              "Adelie, m", 
+                              "Chinstrap, m", 
+                              "Gentoo, m")) +
+
+  scale_y_continuous(limits = c(0,max(penguins$body_mass)*1.1)) + 
+  
+  scale_x_continuous(limits = c(155, 255),
+                     breaks = seq(155, 255,10 )) + 
+  
+  labs(x = "Flipper length", 
+       y = "Body mass",
+       colour = "",
+       shape = "",
+       title = "Base R Penguins",
+       subtitle = "Does flipper length increase with body mass
+       and is sex an effect modifier?") + 
+  
+  theme_minimal() + 
+  theme(
+    
+    axis.title.x = element_text(margin = margin(20)),
+    axis.title.y = element_text(margin = margin(r=20))
+  
+  )
+
+ggsave(filename = "../figs/Penguins.jpeg", 
+       plot = last_plot(), 
+       dpi = 300,
+       width = 14,
+       height = 12,
+       units = "cm"
+       )
+                          
+```
+
+
+
+
+
+
+
+

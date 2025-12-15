@@ -1,0 +1,124 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: show
+date: "2025-03-11"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-03-04https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-03-11
+
+{pixarfilms} vignette: https://erictleung.com/pixarfilms/
+
+
+Pixar Films
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               pixarfilms,
+               scales
+               )
+```
+
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-03-11')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 10)
+
+pixar_films <- tuesdata$pixar_films
+public_response <- tuesdata$public_response
+
+box_office <-  pixarfilms::box_office
+
+```
+
+```{r join}
+
+pixar_films <- left_join(pixar_films, box_office, by = "film")
+pixar_films <-  left_join(pixar_films, public_response, by = "film")
+
+```
+
+
+```{r plot-budget-box}
+
+
+pixar_films |> 
+  drop_na(film, box_office_worldwide) |> 
+  ggplot(aes(x = reorder(film, release_date),
+             y = box_office_worldwide,)) + 
+  geom_point(aes(size   = budget,
+                 colour = budget)) +
+  
+  scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6)) + 
+  
+  scale_color_continuous_sequential(palette = "SunsetDark",
+                                    guide = "legend", 
+                                    limits = c(0,300000000), 
+                                    breaks = seq(0,300000000, by = 50000000),
+                                    labels = unit_format(unit = "M", scale = 1e-6)) + 
+  
+
+   
+   scale_size_continuous(
+                        limits = c(0,300000000), 
+                        breaks = seq(0,300000000, by = 50000000),
+                        labels = unit_format(unit = "M", scale = 1e-6)) + 
+  
+  
+  theme_minimal() + 
+  
+  theme(
+    
+    axis.text.x = element_text(angle = 90, hjust = 1),
+    panel.grid.major = element_line(colour = "lightgrey"),
+    panel.grid.minor = element_blank()
+    
+    
+  )  + 
+  labs(title = "Pixar films", 
+       subtitle = "Does budget get you Box Office?",
+       x = "",
+       y = "Box office gross - worldwide",
+       caption = "Films ordered by release data (earlier -> later)",
+       colour = "Budget",
+       size = "Budget")
+
+
+ggsave(plot = last_plot(),
+       "Pixar.jpeg", 
+       dpi = 300,
+       width = 30, 
+       height = 20, 
+       units = "cm")
+
+
+```
+

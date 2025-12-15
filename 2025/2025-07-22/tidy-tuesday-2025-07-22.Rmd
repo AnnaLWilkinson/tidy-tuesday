@@ -1,0 +1,211 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'mta_permanent_art.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-07-22"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README:https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-22/readme.md
+
+
+**MTA Permanent Art Catalog**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-07-22')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 29)
+
+mta_art <- tuesdata$mta_art
+station_lines <- tuesdata$station_lines
+
+# Option 2: Read directly from GitHub
+
+#mta_art <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-22/mta_art.csv')
+#station_lines <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-22/station_lines.csv')
+```
+
+
+```{r summary}
+summary(mta_art)
+summary(station_lines)
+
+```
+
+```{r eda-stations}
+
+station_lines |> 
+  group_by(station_name) |> 
+  count() |> 
+  arrange(desc(n))
+
+station_lines |> 
+  group_by(station_name, line) |> 
+  count() |> 
+  arrange(desc(n))
+
+station_lines |> 
+  group_by(line) |> 
+  count() |> 
+  arrange(desc(n))
+
+
+```
+
+
+```{r eda-material}
+
+mta_art |> 
+  group_by(art_material) |> 
+  count() |> 
+  arrange(desc(n))
+
+
+mta_art |> 
+  group_by(art_date, art_material) |> 
+  count() |> 
+  arrange(desc(n))
+
+mta_art |> 
+  group_by(art_date, art_material) |> 
+  count() |> 
+  
+ # filter(art_date >=2020) |> 
+  
+  ggplot() + 
+  geom_bar(aes(x = art_date, 
+               y = n, 
+               fill = art_material),
+           stat = "identity")
+```
+
+
+```{r eda-material-tile, fig.width=15, fig.height=20}
+
+
+mta_art |> 
+  group_by(art_date, art_material) |> 
+  filter(art_date >1985) |> 
+  count() |> 
+  
+  ggplot() + 
+  
+  geom_tile(aes(x = art_date,
+                y = reorder(art_material,n),
+                fill = n)) + 
+  
+  scale_fill_gradient(low = "#81cdc6", high = "#005F5F") +
+  
+  labs(x = "",
+       y = "",
+       fill = "Number of art works",
+       title = "MTA permanent art works",
+       subtitle = "Are there materials that have increased in use over time?") + 
+  
+  theme_classic() + 
+  theme(
+    
+    panel.grid.major.x = element_line(colour = "lightgrey")
+  ) 
+
+
+ggsave(filename = "../figs/mta_art.jpeg",
+       plot     = last_plot())
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

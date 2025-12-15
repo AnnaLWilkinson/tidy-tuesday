@@ -1,0 +1,230 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'netflix.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-07-29"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README:https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-22/readme.md
+
+
+**Netflix watching**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis,
+               gghighlight
+               )
+
+```
+
+```{r import}
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-07-29')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 30)
+
+movies <- tuesdata$movies
+shows <- tuesdata$shows
+
+# Option 2: Read directly from GitHub
+
+# movies <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-29/movies.csv')
+# shows <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-29/shows.csv')
+```
+
+
+
+```{r summary}
+
+summary(movies)
+summary(shows)
+range(movies$release_date, na.rm = TRUE)
+
+```
+
+```{r process-dates}
+
+movies <-  movies |> 
+  mutate(release_mth = lubridate::month(release_date),
+         release_yr = lubridate::year(release_date))
+tabyl(movies, release_yr)
+
+```
+
+
+```{r eda-hours}
+
+movies |> 
+  ggplot() + 
+  geom_point(aes(x = release_yr, 
+                 y = hours_viewed))
+
+movies |> 
+  ggplot() + 
+  geom_jitter(aes(x = factor(release_yr), 
+                  y  = hours_viewed)) + 
+  theme_classic() + 
+  coord_flip()
+
+```
+
+```{r eda-hours-runtime}
+
+movies |> 
+  ggplot() + 
+  geom_point(aes(x = hours_viewed,
+                 y = runtime))
+```
+
+
+```{r process-month}
+
+movies <- movies |> 
+  mutate(release_mth_chr  = case_when(
+    release_mth == 1 ~  "Jan",
+    release_mth == 2 ~  "Feb",
+    release_mth == 3 ~  "Mar",
+    release_mth == 4 ~  "Apr",
+    release_mth == 5 ~  "May",
+    release_mth == 6 ~  "Jun",
+    release_mth == 7 ~  "Jul",
+    release_mth == 8 ~  "Aug",
+    release_mth == 9 ~  "Sep",
+    release_mth == 10 ~ "Oct",
+    release_mth == 11 ~ "Nov",
+    release_mth == 12 ~ "Dec",
+  ))
+
+
+movies$release_mth_chr <-  factor(movies$release_mth_chr,
+                                  levels = c(
+                                      "Jan",
+                                      "Feb",
+                                      "Mar",
+                                      "Apr",
+                                      "May",
+                                      "Jun",
+                                      "Jul",
+                                      "Aug",
+                                      "Sep",
+                                      "Oct",
+                                      "Nov",
+                                      "Dec"  
+                                  ))
+
+```
+
+
+```{r prep-plot}
+
+highlight_plot_df <-  movies |> 
+  drop_na(release_yr, release_mth) |> 
+  filter(release_yr >=2017 & release_yr !=2025) |> 
+  group_by(release_yr) |> 
+  mutate(max_month = if_else(hours_viewed == max(hours_viewed), 1, 0)) |> 
+  filter(max_month ==1)  
+
+movies_plot_df <-  movies |>
+  drop_na(release_yr, release_mth) |> 
+  filter(release_yr >=2017 & release_yr !=2025) |> 
+  group_by(release_yr,release_mth_chr) |> 
+  summarise(sum_hrs_viewed = sum(hours_viewed)) |> 
+  ungroup() 
+```
+
+
+```{r plot-viewing-month-year, fig.height=8, fig.width=8}
+
+ggplot() +
+  geom_bar(data = movies_plot_df,
+           aes(x = release_mth_chr,
+               y = sum_hrs_viewed),
+           stat = "identity",
+           fill = "lightgrey") + 
+  
+  geom_bar(data = highlight_plot_df, 
+           aes(x = release_mth_chr, 
+               y = hours_viewed),
+           stat  ="identity",
+           fill = "darkred") + 
+  
+
+  labs(title    = "Netflix watching", 
+       subtitle = "Does the same month have the highest viewing each year?",
+       x = "",
+       y = "Hours viewed") + 
+  
+  theme_minimal() + 
+  
+  scale_y_continuous(labels = scales::label_number(scale = 1e-6, suffix = "M")) +
+  
+  theme(
+    
+    axis.text.x = element_text(angle = -90, 
+                               hjust = 0,
+                               vjust = 0.25) ,
+    aspect.ratio = 1
+  ) + 
+  
+  facet_wrap(~release_yr)
+
+
+ggsave(filename = "../figs/newtflix.jpeg",
+       plot = last_plot())
+```
+
+
+

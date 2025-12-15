@@ -1,0 +1,402 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: hide
+date: "2025-01-28"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-01-21/readme.md
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               skimr,
+               janitor,
+               lubridate,
+               gtsummary,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               RColorBrewer,
+               MetBrewer,
+               ggdist
+               )
+```
+
+```{r load-data}
+# Option 1: tidytuesdayR package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-01-21')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 3)
+
+exped_tidy <- tuesdata$exped_tidy
+peaks_tidy <- tuesdata$peaks_tidy
+```
+
+```{r look}
+summary(exped_tidy)
+skimr::skim(exped_tidy)
+
+```
+
+```{r names}
+names(exped_tidy) <-  tolower(names(exped_tidy))
+```
+
+
+```{r tbles }
+
+with(exped_tidy, table(disputed, useNA = 'always'))
+with(exped_tidy, table(claimed, useNA = 'always'))
+with(exped_tidy, table(success1, useNA = 'always'))
+with(exped_tidy, table(success2, useNA = 'always'))
+with(exped_tidy, table(success3, useNA = 'always'))
+with(exped_tidy, table(success4, useNA = 'always'))
+
+```
+```{r exp-routes}
+
+exped_tidy |> 
+  group_by(peakid) |> 
+  count() |> 
+  ggplot() + 
+  geom_bar(aes(x = reorder(peakid, -n),
+               y = n), 
+           stat = "identity") + 
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, size = 6)
+  )
+
+exped_tidy |> 
+  filter(peakid == "EVER") |> 
+  select(peakid, route1) |> 
+  group_by(route1) |> 
+  count()
+
+```
+
+```{r exp-terminations}
+
+with(exped_tidy, table(termreason_factor, useNA = "always"))
+
+exped_tidy |> 
+  group_by(termreason_factor) |> 
+  count()
+
+exped_tidy |> 
+  select(peakid, termreason_factor) |> 
+  group_by(peakid, termreason_factor) |> 
+  summarise(n = n())
+
+exped_tidy |> 
+  select(peakid, termreason_factor) |> 
+  group_by(peakid, termreason_factor) |> 
+  summarise(n = n()) %>% 
+  ggplot() + 
+  geom_bar(aes(x    = reorder(peakid, -n),
+               y    = n, 
+               fill = termreason_factor), 
+           stat = "identity") + 
+  theme_minimal()
+
+
+exped_tidy |> 
+  filter(peakid == "EVER") %>% 
+  select(peakid, termreason_factor) |> 
+  group_by(peakid, termreason_factor) |> 
+  summarise(n = n()) %>% 
+  ggplot() + 
+  geom_bar(aes(x    = reorder(peakid, -n),
+               y    = n, 
+               fill = termreason_factor), 
+           stat = "identity") + 
+  theme_minimal()
+
+
+
+```
+```{r exp-numbers}
+
+exped_tidy %>% 
+  ggplot() +
+  geom_jitter(aes(x = year, 
+                 y = totmembers)) + 
+  labs(y = "Number of members")   +
+  theme_minimal() +
+  theme( 
+  
+    panel.grid.major = element_line(colour = "lightgrey")
+  )
+
+
+```
+```{r exp-sponsors}
+
+with(exped_tidy, table(nation, useNA = 'always'))
+with(exped_tidy, table(leaders, useNA = 'always'))
+with(exped_tidy, table(sponsor, useNA = 'always'))
+
+exped_tidy %>% 
+  group_by(sponsor) %>% 
+  count()
+
+with(exped_tidy, table(accidents, useNA = 'always'))
+
+```
+```{r exp-numbers-terminations}
+with(exped_tidy, table(termreason_factor, useNA = "always"))
+
+exped_tidy <-  exped_tidy %>% 
+  mutate(term_binary = case_when(
+    
+    termreason_factor == "Success (main peak)"           ~ "Success (main peak)", 
+    termreason_factor == "Success (subpeak, foresummit)" ~ "Success (subpeak, foresummit)", 
+    is.na(termreason_factor) ~ NA_character_,
+    TRUE ~ "Termination"
+    
+  ))
+
+with(exped_tidy, table(termreason_factor, term_binary, useNA = "always"))
+
+```
+```{r plot-number-success-year}
+
+my_totmembers_summ <- exped_tidy %>% 
+  select(totmembers, year) %>% 
+  group_by(year) %>% 
+  summarise(across(everything(),
+             list(mean   = ~mean(., na.rm = T),
+                  median = ~median(., na.rm = T),
+                  n = ~n())
+             )
+           )
+
+
+exped_tidy %>% 
+  ggplot() +
+  geom_jitter(aes(x = year, 
+                 y = totmembers, 
+                 colour = term_binary),
+              size = 2,
+              weidth = 0.25,
+              height = 1,
+              alpha = 0.8) + 
+  scale_colour_manual(values = met.brewer(name = "Isfahan2")) + 
+  scale_y_continuous(limits = c(0,50), 
+                     expand = c(0,0)) +
+  labs(y       = "Number of members", 
+       x       = "", 
+       colour  = "",
+       title   = "Himalayan Mountaineering Expeditions")   +
+  theme_minimal() +
+  theme( 
+  
+    panel.grid.major = element_line(colour = "lightgrey")
+  )
+```
+
+
+```{r ggdist-numbers}
+
+## try ggdist
+table(exped_tidy$year)
+
+exped_tidy %>% 
+  ggplot() +
+  
+  #dots
+  stat_slab(aes(x  = factor(year), 
+                y       = totmembers))  +
+  
+  #interval
+  stat_pointinterval(aes(x  = factor(year), 
+                         y        = totmembers),
+                         point_interval = "median_qi",
+                     linewidth = 0.25) +
+  
+  #scaling
+  scale_fill_manual(values = met.brewer(name = "Isfahan2")) +
+  scale_colour_manual(values = met.brewer(name = "Isfahan2")) +
+  scale_y_continuous(limits = c(0,50), 
+                     expand = c(0,0)) +
+  
+  #labels
+  labs(y       = "Number of members", 
+       x       = "", 
+       colour  = "",
+       title   = "Himalayan Mountaineering Expeditions")   +
+  
+  #theme
+  theme_minimal() +
+  theme( 
+  
+    panel.grid.major = element_line(colour = "lightgrey") 
+    
+  ) +
+  
+  #flip
+  coord_flip()
+
+
+```
+```{r swarm, include = TRUE}
+
+exped_tidy %>% 
+  ggplot() +
+  
+  #dots
+  geom_dots(aes(y  = factor(year), 
+                x = totmembers,
+               colour = term_binary,
+               fill   = term_binary),
+            binwidth  = 0.35, 
+            dotsize   =  1.3,
+            overflow = "compress")   +
+
+ #scaling
+  scale_colour_manual(values = met.brewer(name = "Java"),
+                      name   = "", 
+                      labels = c("Success (main peak)", "Success (subpeak, foresummit)", "Termination")
+                      )+
+  scale_fill_manual(values = met.brewer(name = "Java"),
+                                          name   = "", 
+                      labels = c("Success (main peak)", "Success (subpeak, foresummit)", "Termination")
+                     ) +
+                    
+  scale_x_continuous(limits = c(0,50)) +
+  
+  #labels
+  labs(y       = "", 
+       x       = "Number of members", 
+       colour  = "",
+       fill    = "",
+       title   = "Himalayan Mountaineering Expeditions")   +
+  
+  #theme
+  theme_minimal() +
+  theme( 
+  
+    panel.grid.major = element_line(colour = "lightgrey") ,
+    
+    legend.position = "bottom",
+    
+    axis.text.x = element_text(vjust = 10)
+    
+  ) 
+  
+  #flip
+ # coord_flip()
+
+
+
+
+
+```
+
+
+```{r peaks}
+
+names(peaks_tidy) <-  tolower(names(peaks_tidy))
+
+peaks_tidy |> 
+ggplot(aes(y = region_factor, 
+           x = heightm)) +
+  stat_slab(aes(fill = after_stat(level)), 
+            point_interval = median_qi,
+            .width = c(.5, .95),
+            alpha = 0.8) +
+  
+  stat_spike(aes(linetype = after_stat(at)), at = c("median", "interval (qi)" = qi)) +
+  scale_fill_brewer(na.value = "gray95") +
+  scale_thickness_shared() +
+  
+  labs(subtitle = "Himlayan Peaks",
+       y = "",
+       x = "Height (m)") +
+  
+  scale_fill_manual(values = met.brewer(name = "VanGogh3", n = 4)) + 
+  
+  theme_minimal()
+
+```
+
+```{r plot-raincloud-height}
+
+
+peaks_tidy  |> 
+  ggplot(aes(x = region_factor,
+              y= heightm)) + 
+  ggdist::stat_halfeye(
+    
+    adjust = 0.5,
+    width = 0.6,
+    justification = -0.2,
+    width = 0,
+    point_colour = NA
+  )  +
+  geom_boxplot(width = .15) +
+  ggdist::stat_dots(
+    
+    side = "left",
+    justification = 1.12,
+    binwidth = 0.25
+  )
+
+```
+
+```{r raincloud-climbers, fig.height=10}
+exped_tidy  |> 
+  ggplot() + 
+  
+  ggdist::stat_halfeye(aes(x = factor(year),
+                           y = totmembers),
+                      width = .5,
+                     # scale = 0.5,
+                      .width = c(.5, .95)
+                      )  +
+
+  ggdist::stat_dots(aes(x = factor(year),
+                        y = totmembers),
+    
+    side = "left",
+    binwidth = 0.1
+
+  )  +
+  coord_flip()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

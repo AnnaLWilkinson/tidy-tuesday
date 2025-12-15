@@ -1,0 +1,249 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_effective_care.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-04-08"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-08/readme.md
+
+
+**Timely and Effective Care by US State**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-04-08')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 13)
+
+care_state<- tuesdata$care_state
+
+```
+
+
+```{r summary}
+skimr::skim(care_state)
+
+summary(care_state)
+```
+
+```{r vis-all}
+
+visdat::vis_dat(care_state)
+
+```
+
+```{r explore-measures}
+
+unique(care_state$state)
+with(care_state, table(condition, useNA = 'always'))
+with(care_state, table(measure_id, useNA = 'always'))
+with(care_state, table(measure_name, useNA = 'always'))
+
+
+care_state |> 
+  group_by(state,measure_id) |> 
+  count()
+
+care_state |> 
+  ggplot() +
+  geom_density(aes(x = score))
+
+```
+
+```{r dates}
+
+care_state <-  care_state |> 
+  mutate(start_year = year(start_date),
+         start_mon  = month(start_date),
+         start_ymon = zoo::as.yearmon(paste(start_year, start_mon, sep = "-"))
+         )
+
+range(care_state$start_ymon)
+unique(care_state$start_ymon)
+```
+
+
+```{r measures-state}
+
+care_state |> 
+  group_by(start_ymon) |> 
+  count()
+
+care_state |> 
+  group_by(start_ymon, measure_id) |> 
+  count()
+
+care_state |> 
+  group_by(state, measure_id, start_ymon) |> 
+  count()
+
+unique(care_state$measure_id)
+
+care_state |> 
+  filter(start_ymon == 'Jan 2023' | start_ymon =="Jan 2024") |> 
+  filter(measure_id == "SAFE_USE_OF_OPIOIDS") |> 
+  group_by(state, start_ymon) |> 
+  summarise(mean_score = mean(score, na.rm = TRUE)) |> 
+  arrange(state, start_ymon)
+
+
+care_state |> 
+  filter(start_ymon == "Jan 2023") |> 
+  filter(measure_id == "SAFE_USE_OF_OPIOIDS") |> 
+  group_by(state) |> 
+  count()
+
+```
+
+```{r explore-plot-opioids-score}
+
+care_state |> 
+  filter(start_ymon == "Jan 2023") |> 
+  filter(measure_id == "SAFE_USE_OF_OPIOIDS") |> 
+  ggplot() + 
+  geom_point(aes(x = reorder(state,-score),
+                 y = score)) +
+  theme_minimal() +
+  theme(
+    
+    axis.text.x = element_text(angle = 90)
+  )
+
+```
+
+```{r explore-plots-sepsis}
+
+care_state |> 
+  filter(measure_id == "SEP_1") |> 
+  group_by(state, start_ymon) |> 
+  count()
+
+# % pts that receive appropriate care for septic shock - higher is better
+care_state |> 
+  filter(start_ymon == "April 2023") |> 
+  filter(measure_id == "SEP_1") |> 
+  ggplot() + 
+  geom_point(aes(x = reorder(state,-score),
+                 y = score)) +
+  theme_minimal() +
+  theme(
+    
+    axis.text.x = element_text(angle = 90)
+  )
+
+```
+
+```{r plots-sepsis-pretty, warning = FALSE, fig.height=10, fig.width=8}
+
+# % pts that receive approproitate care for septic shock - higher is better
+care_state |> 
+  filter(start_ymon == "April 2023") |> 
+  filter(measure_id == "SEP_1") |> 
+  
+  drop_na(score) |> 
+  
+  ggplot() + 
+  geom_point(aes(x = reorder(state,-score),
+                 y = score),
+             size = 1.5,
+             colour = "maroon") +
+  
+  geom_segment(aes(x = state,
+                xend = state,
+                 y = score, 
+                 yend = 0),
+               linewidth = 0.75,
+               colour = "maroon",
+               alpha = 0.75) + 
+  
+  labs( x        = "State",
+        y        = "Proportion of patients (%)",
+        title    = "Effective care in the US",
+        subtitle = "Is there a difference by state in care for sepsis?",
+        caption  = "Score is proportion of patients that receive 
+                    appropriate care for severse sepsis and septic shock. 
+                    Higher proportion is better.") + 
+  
+  scale_y_continuous(limits = c(0,100),
+                     breaks = seq(0,100, 25),
+                     expand = c(0,0)) + 
+  theme_minimal() +
+  theme(
+    
+    axis.text.x  = element_text(angle = 90, hjust = 0.5, vjust = 0.5),
+    axis.title.y = element_text(margin = margin(r = 20)),
+    panel.grid.minor.y = element_blank()
+    
+  ) + 
+  coord_flip()
+
+ggsave(filename = "../figs/us_effective_care.jpeg", 
+       plot = last_plot(), 
+       dpi = 300,
+       width = 11,
+       height = 16,
+       units = "cm"
+       )
+
+
+```
+
+## END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,123 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: hide
+date: "2025-02-25"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-02-25/readme.md
+
+Academic Literature on Racial and Ethnic Disparities in Reproductive Medicine in the US
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = FALSE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               lubridate,
+               gtsummary,
+               tidytuesdayR,
+               tidycensus, 
+               sf,
+               scales,
+               colorspace
+               )
+```
+
+```{r load-data}
+tuesdata <- tidytuesdayR::tt_load('2025-02-25')
+
+article_dat <- tuesdata$article_dat
+model_dat <- tuesdata$model_dat
+```
+
+```{r summary}
+summary(article_dat)
+```
+```{r exploratory-race1, fig.height=10}
+
+article_dat |> 
+  tabyl(race1)
+
+
+article_dat |> 
+  group_by(race1) |> 
+  count() |> 
+  ggplot() +
+    geom_bar(aes(x = reorder(race1,-n),
+                 y = n),
+             stat = "identity") + 
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  ) +
+  coord_flip()
+  
+```
+
+```{r exploratory-race2}
+
+article_dat |> 
+  tabyl(race2)
+
+
+article_dat |> 
+  group_by(race1) |> 
+  count() |> 
+  ggplot() +
+    geom_bar(aes(x = reorder(race1,-n),
+                 y = n),
+             stat = "identity") + 
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  ) +
+  coord_flip()
+
+
+```
+
+```{r pivot}
+
+my_raceCat <-  article_dat |> 
+  select(starts_with("race") & !ends_with("_ss")) |> 
+  pivot_longer(cols = everything(), 
+               names_to = "tbl_position",
+               values_to = "category")
+
+
+my_raceCat |> 
+  group_by(tbl_position, category) |> 
+  count() |> 
+  filter(tbl_position == "race1") |> 
+  ggplot() + 
+  geom_bar(aes(x = category,
+               y = n),
+           stat = "identity") 
+
+```
+
+
+
+
+
+
+

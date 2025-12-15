@@ -1,0 +1,189 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_effective_care.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-04-29"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-15/readme.md
+
+
+**useR! 2025 program**  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis,
+               rlang,
+               ggsci,
+               patchwork,
+               treemap,
+               RColorBrewer
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-04-29')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 17)
+
+user2025 <- tuesdata$user2025
+
+# Option 2: Read directly from GitHub
+
+user2025 <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-29/user2025.csv')
+```
+
+```{r summary}
+
+summary(user2025)
+
+```
+```{r eda-plot-session}
+
+user2025 |> 
+  group_by(session) |> 
+  count() |> 
+  ggplot() +
+  geom_bar(aes(x = reorder(session,-n),
+               y = n), 
+           stat = "identity") + 
+    coord_flip()
+
+
+```
+
+```{r keywords}
+
+
+keywords <-  user2025 |> 
+  select(id, session, keywords) |> 
+  separate(col = keywords, 
+           sep = ",",
+           into = c("keyword_1", 
+                    "keyword_2",
+                    "keyword_3",
+                    "keyword_4",
+                    "keyword_5"
+                    )) |> 
+  as.data.frame() |> 
+  pivot_longer(cols = c(-id, -session),
+                names_to  = "position", 
+                values_to = "keyword") 
+
+keywords <- keywords |> 
+                mutate(keyword = na_if(keyword, ""))
+
+
+keywords <-  keywords |> 
+                na.omit(keyword)
+
+tabyl(keywords, keyword)
+
+keywords <- keywords |> 
+     mutate(keyword = str_trim(keyword, side = "both"))
+
+```
+
+
+```{r eda-keywords}
+
+keywords |> 
+  group_by(session, keyword) |> 
+  count() |> 
+  arrange(-n)
+
+keywords |> 
+  filter(session == 'Virtual') |> 
+  group_by(keyword) |> 
+  count() |> 
+  arrange(-n)
+
+```
+
+```{r eda-virtual}
+
+keywords |> 
+  filter(session == 'Virtual') |> 
+  group_by(keyword) |> 
+  count() |> 
+  arrange(-n) |> 
+  
+  treemap(index = "keyword", 
+          vSize = "n")
+
+```
+
+
+```{r treemap-pretty}
+
+grDevices::jpeg(filename = "../figs/useR2025.jpeg")
+
+treemap <- keywords |> 
+  filter(session == 'Virtual') |> 
+  group_by(keyword) |> 
+  count() |> 
+  ungroup() |> 
+  arrange(-n) |> 
+  slice_head(n = 15) |> 
+  
+  treemap(index = "keyword", 
+          vSize = "n", 
+          palette = RColorBrewer::brewer.pal(name = "Set3", n = 12),
+          title = "useR! 2025. Virtual session keywords; Top 15",
+          fontsize.labels = 12, 
+          n = 20) 
+
+dev.off()
+
+```
+
+## END
+
+
+

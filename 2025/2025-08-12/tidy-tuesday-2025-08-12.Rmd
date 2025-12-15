@@ -1,0 +1,216 @@
+---
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'weather_extreme.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-08-12"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-08-12/readme.md
+
+
+**Extreme Weather Attribution Studies**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis,
+               gghighlight,
+               plotly
+               )
+
+# install.packages("devtools")
+#devtools::install_github("haleyjeppson/ggmosaic")
+library(ggmosaic)
+
+```
+
+```{r import}
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-08-12')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 32)
+
+attribution_studies <- tuesdata$attribution_studies
+attribution_studies_raw <- tuesdata$attribution_studies_raw
+
+# Option 2: Read directly from GitHub
+
+#attribution_studies <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-12/attribution_studies.csv')
+#attribution_studies_raw <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-12/attribution_studies_raw.csv')
+```
+
+
+```{r summary}
+summary(attribution_studies)
+
+```
+
+```{r eda-event-type}
+
+attribution_studies |> 
+  group_by(event_type) |> 
+  count() |> 
+  arrange(desc(n))
+
+```
+
+```{r eda-plot-event-type}
+
+attribution_studies |> 
+  drop_na(event_year, event_type) |> 
+  group_by(event_year, event_type) |> 
+  count() |> 
+  ggplot() + 
+  geom_bar(aes(x = event_year, 
+               y = n,
+               fill = event_type),
+           stat = "identity") + 
+  coord_flip()
+
+```
+
+```{r eda-heat}
+
+
+attribution_studies |> 
+  filter(event_type == "Heat") |> 
+  drop_na(event_year) |> 
+  group_by(event_year, cb_region) |> 
+  count() |> 
+  arrange(desc(n)) |> 
+  
+  ggplot() + 
+  geom_bar(aes(x = event_year,
+               y = n, 
+               fill = cb_region),
+           stat = "identity") + 
+  
+  coord_flip()
+
+```
+
+
+```{r eda-heat-only}
+
+attribution_studies |> 
+  filter(event_type == "Heat") |> 
+  filter(event_year >=2020) |> 
+  group_by(cb_region) |> 
+  count() 
+
+attribution_studies |> 
+  ggplot() + 
+  ggmosaic::geom_mosaic(aes(x = product(cb_region),
+                            fill = cb_region),
+                        divider = "vspine"
+  )
+
+
+```
+
+
+
+```{r heat-mosaic, fig.height=8, fig.width=6}
+
+set.seed(1945)
+plot <- attribution_studies |> 
+  filter(event_type == "Heat") |> 
+  ggplot() + 
+  ggmosaic::geom_mosaic(aes(x = product(cb_region),
+                            fill = cb_region),
+                        divider = "vspine"
+  ) + 
+  labs(x = "",
+       y = "",
+       title = "Extreme weather attribution studies",
+       subtitle = "Heat event types only") +
+  
+  scale_fill_manual(values = c(randomcoloR::distinctColorPalette(12))) +
+
+  theme_classic()  +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank()
+  ) 
+
+ggsave(filename = "../figs/weather_attributes.jpeg",
+       plot = plot)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

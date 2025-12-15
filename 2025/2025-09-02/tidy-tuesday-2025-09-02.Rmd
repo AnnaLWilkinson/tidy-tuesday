@@ -1,0 +1,234 @@
+
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'australian_frogs.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-09-02"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-08-19/readme.md
+
+
+**Australian Frogs**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis,
+               gghighlight,
+               networkdD3
+               )
+
+```
+
+```{r import}
+
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-09-02')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 35)
+
+frogID_data <- tuesdata$frogID_data
+frog_names <- tuesdata$frog_names
+
+# Option 2: Read directly from GitHub
+
+# frogID_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-09-02/frogID_data.csv')
+# frog_names <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-09-02/frog_names.csv')
+```
+
+
+```{r summary}
+
+summary(frog_names)
+summary(frogID_data)
+
+range(frogID_data$eventDate)
+```
+```{r process-dates}
+
+frogID_data |> 
+ group_by(eventDate) |> 
+ count()
+
+
+frogID_data |> 
+ group_by(scientificName, eventDate) |> 
+ count()
+
+
+frogID_data <- frogID_data |> 
+  mutate(event_mth   = lubridate::month(eventDate, label = TRUE), 
+         event_yr    = lubridate::year(eventDate),
+         event_monyr = zoo::as.yearmon(eventDate))
+```
+
+```{r year-mon-calls}
+
+frogID_data |> 
+ group_by(scientificName, event_monyr ) |> 
+ count()
+
+frogID_data |> 
+ group_by(scientificName, event_monyr ) |> 
+ count() |> 
+  ggplot() + 
+  geom_line(aes(x = as.factor(event_monyr), 
+                y = n, 
+                group = scientificName)) 
+
+frogID_data |> 
+ group_by(event_monyr ) |> 
+ count() |> 
+  ggplot() + 
+  geom_bar(aes(x = event_monyr, 
+               y = n),
+           stat = "identity")
+
+```
+
+```{r eq-solstice}
+
+SS_2022 <- as.Date("2022-12-22", format=  "%Y-%m-%d")  ## Summer Solistice 2022
+AE_2023 <- as.Date("2023-03-02", format=  "%Y-%m-%d")   ## Autumn Equinox
+WS_2023 <- as.Date("2023-06-11", format=  "%Y-%m-%d")  ## Winter Solistice
+SE_2023 <- as.Date("2023-09-23", format=  "%Y-%m-%d")  ## Summer Equinox
+SS_2023 <- as.Date("2023-12-22", format=  "%Y-%m-%d")  ## Summer Solistice 2023
+AE_2024 <- as.Date("2024-03-20", format=  "%Y-%m-%d")   ## Autumn Equinox 2024
+
+
+
+summer_2022  <- interval(SS_2022, AE_2023)
+autumn_2023  <- interval(AE_2023, WS_2023)
+winter_2023  <- interval(WS_2023, SE_2023)
+spring_2023  <- interval(SE_2023, SS_2023)
+summer_2023  <- interval(SS_2023, AE_2024)
+
+summary(summer_2022)
+summary(autumn_2023)
+summary(winter_2023)
+summary(spring_2023)
+summary(summer_2023)
+
+frogID_data <-  frogID_data |> 
+  mutate(season = case_when(
+    eventDate %within% summer_2022 ~ "Summer 2022",
+    eventDate %within% autumn_2023 ~ "Autumn 2023",
+    eventDate %within% winter_2023 ~ "Winter 2023",
+    eventDate %within% spring_2023 ~ "Spring 2023",
+    eventDate %within% summer_2023 ~ "Summer 2023",
+    TRUE ~ "Check"
+  ))
+
+
+frogID_data |> 
+  group_by(season) |> 
+  count()
+
+
+frogID_data$season_fct <-  factor(frogID_data$season, 
+                                  
+                          levels = c("Summer 2022", 
+                                     "Autumn 2023",
+                                     "Winter 2023",
+                                     "Spring 2023",
+                                     "Summer 2023"))
+
+levels(frogID_data$season_fct)
+tabyl(frogID_data, season)
+
+```
+
+
+```{r eda-season}
+
+frogID_data |> 
+  group_by(season_fct) |> 
+  count() |> 
+  ggplot() + 
+  geom_bar(aes(x = season_fct, 
+               y = n),
+           stat = "identity")
+
+
+```
+```{r pretty-season}
+
+frogID_data |> 
+  group_by(season_fct) |> 
+  count() |> 
+  ggplot() + 
+  geom_bar(aes(x = season_fct, 
+               y = n),
+           stat = "identity",
+           fill = "#99c68e") + 
+  
+ scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix ="K" ) )   + 
+  
+  labs(x = "",
+       y = "Count of events (frog calls) (n)",
+       title = "Australian Frogs") + 
+  
+  theme_bw() + 
+  theme(
+    
+    axis.title.y  = element_text(vjust = 3)
+  )
+
+
+ggsave(filename = "../figs/aust_frogs.jpeg",
+       plot = last_plot())
+```
+

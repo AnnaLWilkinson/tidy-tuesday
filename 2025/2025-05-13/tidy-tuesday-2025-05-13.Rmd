@@ -1,0 +1,186 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_effective_care.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-05-13"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-15/readme.md
+
+
+**Seismic Events at Mount Vesuvius**  
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis,
+               rlang,
+               ggsci,
+               patchwork,
+               treemap,
+               RColorBrewer
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-05-13')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 19)
+
+vesuvius <- tuesdata$vesuvius
+
+# Option 2: Read directly from GitHub
+
+#vesuvius <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-05-13/vesuvius.csv')
+```
+
+
+```{r summary}
+
+summary(vesuvius)
+length(unique(vesuvius$event_id))
+
+```
+
+```{r eda-events-year}
+
+vesuvius |> 
+  group_by(year, type) |> 
+  count() |> 
+  
+  ggplot() + 
+  geom_bar(aes(x = factor(year), 
+               y = n),
+           stat = "identity"
+               )
+
+```
+
+```{r eda-depth}
+
+vesuvius |> 
+  ggplot(aes(x = factor(year),
+                  y = depth_km)) + 
+  
+  geom_jitter(alpha = 0.2)
+
+```
+
+```{r eda-magnitude}
+
+vesuvius |> 
+  ggplot() + 
+  geom_point(aes(x = factor(year),
+                  y = duration_magnitude_md))
+
+
+
+vesuvius |> 
+  ggplot() + 
+  geom_boxplot(aes(x = factor(year),
+                  y = duration_magnitude_md))
+
+
+vesuvius |> 
+  ggplot(aes(x = factor(year),
+                  y = duration_magnitude_md,
+                  colour = duration_magnitude_md)) + 
+  geom_jitter(position = position_jitter(width = 0.3, height = 1),
+              alpha = 0.2)
+
+```
+
+```{r pretty-plot-mag}
+
+
+vesuvius |> 
+  filter(year >=2013) |> 
+  ggplot(aes(x = factor(year),
+                  y = duration_magnitude_md,
+                  colour = duration_magnitude_md)) + 
+  geom_jitter(position = position_jitter(width = 0.3, height = 1),
+              alpha = 0.3) + 
+  
+  scale_colour_gradient(low = "#babfd1", high ="#70737d")  +
+  
+  scale_y_continuous(
+                     expand = expansion(mult = 0.1), 
+                     breaks = seq(-4, 4, 1)) + 
+  
+  labs(x  = "",
+       y = "Duration magnitude (Md)",
+       caption = "Md is a measure of energy release. 
+                  Negative values are very small events",
+       title = "Mount Vesuvius Seismic events", 
+       subtitle = "Is magnitude of events increasing over time?",
+       colour = "Magnitude") + 
+  
+  theme_minimal() + 
+  theme(
+    
+  ) + 
+  coord_flip()
+
+
+ggsave(
+  filename = "../figs/vesuvius.jpeg", 
+  plot = last_plot()
+)
+
+
+
+```
+
+## END
+
+
+
+
+
+

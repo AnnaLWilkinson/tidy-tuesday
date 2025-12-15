@@ -1,0 +1,175 @@
+
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'scottish_munros.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-08-19"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-08-19/readme.md
+
+
+**Scottish Munros**
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork,
+               viridis,
+               gghighlight,
+               networkdD3
+               )
+
+```
+
+```{r import}
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-08-19')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 33)
+
+scottish_munros <- tuesdata$scottish_munros
+
+# Option 2: Read directly from GitHub
+
+# scottish_munros <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-08-19/scottish_munros.csv')
+```
+
+```{r summary}
+summary(scottish_munros)
+names(scottish_munros)
+
+scottish_munros <-  scottish_munros |> 
+  clean_names()
+
+```
+
+
+```{r process-munro}
+
+my_sub_munros <-  scottish_munros |> 
+  select(name, x1891, x1953, x2021) |> 
+  rename_with(cols = -name,
+              ~ str_replace_all(., "x", "yr_"))
+
+my_sub_munros_long <-  my_sub_munros |> 
+  pivot_longer(cols = -name, 
+               names_to = "year",
+               values_to = "classification")
+
+my_sub_munros_long |> 
+  group_by(year, classification) |> 
+  count()
+
+my_sub_munros |> 
+  tabyl(yr_1891, yr_1953)
+
+my_sub_munros |> 
+  tabyl(yr_1953, yr_2021)
+
+```
+
+
+
+```{r sankey-plot}
+
+
+# A connection data frame is a list of flows with intensity for each flow
+links <- data.frame(
+  source=c("Munro_1891","Munro_1891", "Munro_Top_1891", "Munro_Top_1891", "Munro_1953", "Munro_1953", "Munro_Top_1953", "Munro_Top_1953"), 
+  target=c("Munro_1953","Munro_Top_1953", "Munro_1953", "Munro_Top_1953", "Munro_2021", "Munro_Top_2021", "Munro_2021", "Munro_Top_2021"), 
+  value=c(259,19, 12, 230, 262, 10, 14, 190)
+)
+
+# From these flows we need to create a node data frame: it lists every entities involved in the flow
+nodes <- data.frame(
+  name=c(as.character(links$source), 
+         as.character(links$target)) %>% unique()
+)
+
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+links$IDsource <- match(links$source, nodes$name)-1 
+links$IDtarget <- match(links$target, nodes$name)-1
+
+
+# Add a 'group' column to the nodes data frame:
+nodes$group <- as.factor(c("a","b","a","b","a","b"))
+ 
+# Give a color for each group:
+my_color <- 'd3.scaleOrdinal() .domain(["a", "b"]) .range(["darkorange", "steelblue"])'
+ 
+
+# Make the Network
+p <- networkD3::sankeyNetwork(Links = links, Nodes = nodes,
+                   Source = "IDsource", Target = "IDtarget",
+                   Value = "value", NodeID = "name", 
+                   colourScale = my_color, NodeGroup = "group",
+                   sinksRight=FALSE)
+p
+
+
+# you save it as an html
+saveNetwork(p, "sn.html")
+
+library(webshot)
+# you convert it as png
+webshot::webshot(url = "sn.html", file = "../figs/munros.png")
+
+```
+
+
+
+## END
+
+
+

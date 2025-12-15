@@ -1,0 +1,274 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_judges.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-06-10"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-06-10/readme.md#us-judges-and-the-historydata-r-package
+
+
+**U.S. Judges and the historydata R package**
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               amerika,
+               patchwork
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-06-10')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 23)
+
+judges_appointments <- tuesdata$judges_appointments
+judges_people <- tuesdata$judges_people
+
+# Option 2: Read directly from GitHub
+
+# judges_appointments <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-10/judges_appointments.csv')
+# judges_people <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-10/judges_people.csv')
+```
+
+
+```{r summary}
+
+summary(judges_appointments)
+summary(judges_people)
+
+skimr::skim(judges_appointments)
+skimr::skim(judges_people)
+
+# check for duplicates
+sum(duplicated(judges_appointments$judge_id))
+sum(duplicated(judges_people$judge_id))
+
+
+judges_appointments |> 
+  arrange(judge_id) |> 
+  View()
+
+```
+
+
+```{r process-dates}
+# convert dates
+judges_appointments <- judges_appointments |> 
+  mutate(across(ends_with("date"), 
+                ~ lubridate::mdy(.),
+                .names = "{.col}_dte"))
+
+judges_appointments <- judges_appointments |> 
+ rename_at(vars(ends_with("date_dte")), ~str_replace(., "date_dte", "dte"))
+
+
+judges_appointments <- judges_appointments |> 
+  mutate(across(ends_with("dte"), 
+                ~ lubridate::year(.),
+                .names = "{.col}_yr"))
+
+judges_appointments <- judges_appointments |> 
+ rename_at(vars(ends_with("dte_yr")), ~str_replace(., "dte_yr", "yr"))
+
+```
+
+```{r eda-time}
+summary(judges_appointments$senate_confirmation_yr)
+
+judges_appointments |> 
+  group_by(senate_confirmation_yr) |> 
+  count()
+
+judges_appointments |> 
+  group_by(senate_confirmation_yr) |> 
+  count() |> 
+  ggplot() + 
+   geom_bar(aes(x = senate_confirmation_yr,
+                y = n),
+           stat = "identity")
+```
+
+
+
+```{r eda-confirmation-time}
+
+judges_appointments |> 
+  group_by(senate_confirmation_yr) |> 
+  count() |> 
+  ggplot() + 
+   geom_jitter(aes(x = senate_confirmation_yr,
+                y = n),
+           stat = "identity")
+
+```
+
+
+
+
+
+
+```{r process-parties}
+
+tabyl(judges_appointments, president_party)
+
+party_levels <- c("Republican", "Democratic", "Jeffersonian Republican", "Federalist" , "Whig", "Reassignment", "Assignment")
+
+judges_appointments$president_party <- factor(judges_appointments$president_party, 
+                                              levels = party_levels)
+levels(judges_appointments$president_party)
+
+
+# https://en.wikipedia.org/wiki/Political_parties_in_the_United_States#/media/File:PartyVotes-Presidents.png
+amerika::amerika_palette("Republican")
+amerika::amerika_palette("Democrat")
+
+party_palette <- c(
+"#c5000b",
+"#044383",
+"#3f4b15",
+"#ff420e",
+"#b4643c",
+"#767676",
+"#43484b"
+)
+
+
+```
+
+
+```{r pretty-plot}
+
+plotA <- judges_appointments |> 
+  group_by(senate_confirmation_yr, president_party) |> 
+  count() |> 
+  ggplot() + 
+   geom_point(aes(x = senate_confirmation_yr,
+                   y = n,
+                   colour = president_party),
+           shape = 16,
+           size = 2,
+           stat = "identity") + 
+  
+  scale_x_continuous(limits = c(1780, 2020), 
+                     breaks = seq(1780, 2020, 20)) + 
+  
+  scale_y_continuous(limits = c(0,150)) + 
+  
+  scale_colour_manual(values = party_palette) + 
+  
+  labs(title   = "U.S. Judges",
+       y       = "Number of judges (n)",
+       x       = "",
+       colour = "",
+       caption = "citation: R Core Team (2021). R: A language and environment for statistical
+                            computing. R Foundation for Statistical Computing, Vienna, Austria.
+                            URL https://www.R-project.org/.") + 
+  
+  theme_minimal()
+
+```
+
+
+```{r plot-presidents-top10}
+
+plotB <-  judges_appointments |> 
+  group_by(president_name, president_party)  |> 
+  count() |> 
+  ungroup() |> 
+  arrange(desc(n)) |> 
+  slice_head(n = 10) |> 
+  
+  ggplot() + 
+  geom_bar(aes(x = reorder(president_name,-n),
+               y = n,
+               fill = president_party),
+           stat = "identity")  +
+  
+  scale_fill_manual(values = party_palette) + 
+  
+  labs(x = "", 
+       y = "Number of judges (n)",
+       title = "Top 10 Presidents who appointed") + 
+  
+  theme_minimal() + 
+  
+  theme(
+    
+    legend.position = "none"
+  ) + 
+  
+  coord_flip()
+
+```
+
+```{r patch-plot, fig.width=13}
+
+plotA + plotB + 
+  plot_layout(widths = c(2,1))
+
+ggsave(filename = "../figs/us_judges.jpeg",
+       plot = last_plot(),
+       width = 16,
+       height = 10,
+       units = "in",
+       dpi = 1000)
+
+```
+
+
+
+// END

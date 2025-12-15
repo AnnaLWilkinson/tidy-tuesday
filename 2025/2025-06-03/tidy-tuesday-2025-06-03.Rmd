@@ -1,0 +1,206 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'gutenberg.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-05-27"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-06-03/readme.md
+
+
+**Project Gutenberg**  
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               RColorBrewer,
+               randomcoloR
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-06-03')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 22)
+
+gutenberg_authors <- tuesdata$gutenberg_authors
+gutenberg_languages <- tuesdata$gutenberg_languages
+gutenberg_metadata <- tuesdata$gutenberg_metadata
+gutenberg_subjects <- tuesdata$gutenberg_subjects
+
+# Option 2: Read directly from GitHub
+
+# gutenberg_authors <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-03/gutenberg_authors.csv')
+# gutenberg_languages <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-03/gutenberg_languages.csv')
+# gutenberg_metadata <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-03/gutenberg_metadata.csv')
+# gutenberg_subjects <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-06-03/gutenberg_subjects.csv')
+```
+
+
+```{r summary}
+
+summary(gutenberg_languages)
+summary(gutenberg_authors)
+
+length(unique(gutenberg_authors$gutenberg_author_id))
+
+
+gutenberg_authors |> 
+  group_by(author) |> 
+  count() |> 
+  arrange(desc(n))
+
+
+gutenberg_authors |> 
+  group_by(birthdate) |> 
+  count() |> 
+  arrange(desc(n))
+
+```
+
+
+```{r birthdate}
+
+summary(gutenberg_authors$birthdate)
+
+gutenberg_authors |> 
+
+  group_by(birthdate) |> 
+  count() |> 
+  drop_na(birthdate) |> 
+  
+  ggplot() +
+   geom_point(aes(x = birthdate,
+                  y = n),
+              alpha = 0.3,
+              size = 2.5,
+              colour = "navy") +
+  
+  labs(x        = "Author year of birth", 
+       y        = "Count of authors (n)",
+       title    = "Project Gutenberg",
+       subtitle = "Is year of birth associated with being an author in Project Gutenberg collection?",
+       caption = "Project Gutenberg is a library of over 75,000 free eBooks") + 
+  
+  scale_x_continuous(limits = c(-750, 2000),
+                     breaks = seq(-750, 2000, 100)) + 
+  
+  scale_y_continuous(limits = c(0, 400)) + 
+  
+  theme_minimal() + 
+  
+  theme(
+    
+    axis.text.x = element_text(angle = 300, 
+                               vjust = -0.5, 
+                               hjust = 0.5)
+  )
+
+ggsave(filename = "../figs/gutenberg.jpeg",
+       plot = last_plot())
+
+```
+
+```{r author-1850}
+
+gutenberg_authors |> 
+  group_by(birthdate) |> 
+  count() |> 
+  ungroup() |> 
+  drop_na(birthdate) |> 
+  arrange(desc(n)) |> 
+  slice_head(n = 10)
+
+# who was born between 1867 & 1869
+gutenberg_authors |> 
+  filter(birthdate %in% c(1867:1869)) |> 
+  select(author, birthdate)
+
+gutenberg_authors |> 
+  filter(birthdate == 1869) |> 
+  select(author, birthdate)
+
+gutenberg_authors |> 
+  filter(birthdate == 1869) |> 
+  group_by(author) |> 
+  count() |> 
+  ungroup() |> 
+  arrange(desc(n)) |> 
+  slice_head(n=5)
+
+
+gutenberg_authors |> 
+  filter(birthdate == 1869) |> 
+  group_by(author) |> 
+  count() |> 
+  ungroup() |> 
+  arrange(desc(n)) |> 
+  slice_tail(n=5)
+
+```
+
+
+// END
+
+
+
+
+
+
+
+
+
+
+
+
+

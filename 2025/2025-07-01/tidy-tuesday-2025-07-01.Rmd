@@ -1,0 +1,262 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_gas_prices.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-07-01"
+---
+
+* reminder - update file name in line 8
+* reminder - update date in line 13
+
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-07-01/readme.md
+
+
+**Weekly US Gas Prices**
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               colorspace,
+               RColorBrewer,
+               randomcoloR,
+               patchwork
+               )
+
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-07-01')
+## OR
+#tuesdata <- tidytuesdayR::tt_load(2025, week = 26)
+
+weekly_gas_prices <- tuesdata$weekly_gas_prices
+
+# Option 2: Read directly from GitHub
+
+#weekly_gas_prices <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-07-01/weekly_gas_prices.csv')
+```
+
+```{r summary}
+skimr::skim(weekly_gas_prices)
+```
+
+```{r eda-price}
+
+weekly_gas_prices |> 
+  ggplot() +
+  geom_density(aes(x = price))
+
+weekly_gas_prices |> 
+  ggplot() +
+  geom_density(aes(x = price)) + 
+  facet_wrap(~fuel)
+
+weekly_gas_prices |> 
+  ggplot() +
+  geom_density(aes(x = price)) + 
+  facet_wrap(~grade)
+
+
+weekly_gas_prices |> 
+  ggplot() +
+  geom_density(aes(x = price)) + 
+  facet_wrap(~formulation)
+
+```
+
+
+```{r pretty-price}
+
+weekly_gas_prices |>
+  filter(grade == "all" | grade == "low_sulfur") |> 
+  ggplot() +
+  geom_density(aes(x      = price,
+                   colour = grade,
+                   fill = grade),
+               alpha = 0.1)   + 
+  
+  labs(x        = 'Price per gallon (USD)',
+       y        = "Density",
+       title    = 'US Weekly Gas Prices',
+       subtitle = "Does one grade influence the overall price distribution?",
+       caption  = "Price is the average U.S. retail price per gallon in US dollars",
+       colour   = "Grade specification",
+       fill     = "Grade specification"
+       ) + 
+  
+  scale_fill_manual(values = c(cbp1[1], cbp1[2]),
+                    labels = c("All", "Low sulphur")) + 
+  
+  scale_colour_manual(values = c(cbp1[1], cbp1[2]),
+                      labels = c("All", "Low sulphur")) + 
+  
+  theme_minimal() + 
+  
+  theme(
+    
+    axis.title.y =  element_text(vjust = 4),
+    axis.title.x =  element_text(vjust = -1, hjust = .95),
+    plot.caption =  element_text(hjust = 0, vjust = 1)
+  )
+
+
+```
+```{r tidy-facets}
+
+# unique(weekly_gas_prices$grade)
+# 
+# weekly_gas_prices <-  weekly_gas_prices |> 
+#   mutate(grade = case_when(
+#     
+#     grade == "all"               ~ "All", 
+#     grade == "regular"           ~ "Regular", 
+#     grade == "midgrade"          ~ "Midgrade", 
+#     grade == "premium"           ~ "Premium", 
+#     grade == "ultra_low_sulfur"  ~ "Ultralowsulfur", 
+#     grade == "low_sulfur"        ~ "Lowsulfur", 
+#     TRUE ~ 'check'
+#   ))
+# 
+# unique(weekly_gas_prices$grade)
+
+```
+
+
+```{r plot-function}
+
+
+label <- unique(weekly_gas_prices$labels)
+
+my_plot_func <-  function(x_var, label) {
+  
+ plot <-  weekly_gas_prices |>
+    
+  # filter to All plus one other grade
+   filter(grade == "all" | grade == !!x_var) |> 
+    
+  # make plot
+    ggplot() +
+    geom_density(aes(x      = price,
+                     colour = grade,
+                     fill = grade),
+               alpha = 0.1)   + 
+  
+    labs(x        = 'Price per gallon (USD)',
+         y        = "Density",
+       #title    = 'US Weekly Gas Prices',
+       #subtitle = "Does one grade influence the overall price distribution?",
+       #caption  = "Price is the average U.S. retail price per gallon in US dollars",
+       colour   = "",
+       fill     = ""
+       ) + 
+  
+    scale_fill_manual(values = c(cbp1[1], cbp1[2]),
+                    labels = c("All", x_var)) + 
+  
+    scale_colour_manual(values = c(cbp1[1], cbp1[2]),
+                      labels = c("All", x_var)) + 
+  
+    theme_minimal() + 
+  
+    theme(
+    
+    axis.title.y =  element_text(vjust = 4),
+    axis.title.x =  element_text(vjust = -1, hjust = .95),
+    plot.caption =  element_text(hjust = 0, vjust = 1),
+    legend.position = "bottom"
+  )
+ 
+
+
+}
+ 
+
+plot <- lapply(c("low_sulfur", "midgrade", "premium", "regular", "ultra_low_sulfur"), my_plot_func)
+plot
+
+```
+
+
+```{r patch-plots}
+
+plot_low_sulfur   <- plot[[1]] 
+plot_midgrade     <- plot[[2]]
+plot_premium      <- plot[[3]]
+plot_regular      <- plot[[4]]
+plot_ulow_sulfur  <- plot[[5]]
+
+
+plot_low_sulfur + plot_midgrade + plot_premium + plot_regular + plot_spacer() + plot_ulow_sulfur +
+  patchwork::plot_layout(axis_titles = "collect",
+                         ncol = 3) + 
+  patchwork::plot_annotation(title   = "Weekly U.S. Gas Prices",
+                             subtitle = "Which grade influences the overall distribution of price", 
+                             caption = "Price is average U.S. retail price per gallon")
+
+ggsave(filename = "../figs/us_gas_prices.jpeg",
+       plot = last_plot())
+
+```
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+

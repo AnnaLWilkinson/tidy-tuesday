@@ -1,0 +1,661 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+knit: (function(inputFile, encoding) { 
+      out_dir <- '../output';
+      rmarkdown::render(inputFile,
+                        encoding=encoding, 
+                        output_file=file.path(dirname(inputFile), out_dir, 'us_effective_care.html')) })
+output: 
+  html_document:
+    code_folding: show
+date: "2025-05-20"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/blob/main/data/2025/2025-04-15/readme.md
+
+
+**Water Quality at Sydney Beaches**  
+
+
+"Waters are tested for bacteria known as enterococci to determine faecal contamination."
+
+"Swimming in water contaminated by faecal matter can expose you to disease-causing microorganisms which can make you ill."
+
+"In Sydney, a safe level for Enterococci in swimming water is generally considered to be below 40 colony-forming units (cfu) per 100 milliliters (mL). When Enterococci levels exceed 40 cfu/100mL, it's not recommended for safe swimming. This level is used to assess the risk of swimmers potentially becoming ill."
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+
+```{r palette}
+# The palette with grey:
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# The palette with black:
+cbp2 <- c("#000000", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+```{r libraries}
+#load libraries
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               tidytuesdayR,
+               scales,
+               colorspace,
+               scales,
+               pals,
+               viridis,
+               rlang,
+               ggsci,
+               patchwork,
+               treemap,
+               RColorBrewer,
+               ggdist
+               )
+```
+
+```{r import}
+
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+#tuesdata <- tidytuesdayR::tt_load('2025-05-20')
+## OR
+tuesdata <- tidytuesdayR::tt_load(2025, week = 20)
+
+water_quality <- tuesdata$water_quality
+weather <- tuesdata$weather
+
+# Option 2: Read directly from GitHub
+
+#water_quality <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-05-20/water_quality.csv')
+#weather <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-05-20/weather.csv')
+```
+
+```{r join}
+
+summary(weather)  # only one lat and long
+range(weather$date)
+
+water_quality_weather <- left_join(water_quality , select(weather,- latitude,- longitude), 
+                                   by = c("date"),
+                                   keep = FALSE)
+
+```
+
+
+```{r summary}
+
+summary(water_quality)
+range(water_quality$date)
+
+```
+```{r corr-weather-water}
+
+water_quality_weather |> 
+  select(enterococci_cfu_100ml, 
+         water_temperature_c, 
+         max_temp_C,
+         precipitation_mm) |> 
+  GGally::ggpairs()
+  
+```
+
+
+
+```{r process-dates}
+
+water_quality_weather <-  water_quality_weather |> 
+  mutate(year_mon = zoo::as.yearmon(date),
+         year = lubridate::year(date))
+
+```
+
+
+```{r eda-swimsites}
+
+unique(water_quality_weather$swim_site)
+unique(water_quality_weather$region)
+
+```
+
+```{r summarise-enter}
+
+#distribution of enteroc count
+water_quality_weather |> 
+  ggplot() + 
+  geom_line(aes(y = enterococci_cfu_100ml,
+                x = year_mon)) + 
+  facet_wrap(~ region, scales = "free_y")
+
+
+my_summary_enteroc <- water_quality_weather |> 
+  group_by(swim_site, year_mon) |> 
+  summarise(across(enterococci_cfu_100ml,
+    .fns = list(min = min,
+                max = max, 
+                mean = mean, 
+                sd = sd), na.rm = TRUE,
+    .names = "{col}_{fn}"
+    )) |> 
+  ungroup() |> 
+  mutate(year = lubridate::year(year_mon))
+
+```
+
+
+```{r eda-entero}
+
+# 2024 only
+water_quality_weather |> 
+  filter(year == 2024) |> 
+  ggplot() + 
+  geom_line(aes(x = date,
+                  y = enterococci_cfu_100ml,
+                 group = swim_site, 
+                 colour = swim_site)) + 
+  scale_x_date(breaks = "1 month") +
+  
+  scale_y_continuous(expand = c(0,0)) + 
+  
+  theme_minimal() + 
+  theme(
+    
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90,
+                               vjust = 0.5,
+                               hjust = 0)
+
+  ) +
+  labs( x = "",
+        y = "Enterococci cfu/100 milliliters",
+        caption = "CFU:colony-forming units.
+                  When Enterococci levels exceed 40 cfu/100mL, 
+                  it's not recommended for safe swimming."
+  ) + 
+  facet_grid(~ region)
+```
+
+```{r eda-northern}
+
+
+# 2024 only and Northern beaches
+water_quality_weather |> 
+  filter(year   == 2024) |> 
+  filter(region == "Northern Sydney") |> 
+  ggplot() + 
+  geom_line(aes(x = date,
+                y = enterococci_cfu_100ml,
+                group = swim_site, 
+                colour = swim_site)) + 
+  scale_x_date(breaks = "1 month") +
+  
+  scale_y_continuous(expand = c(0,0)) + 
+  
+  theme_minimal() + 
+  theme(
+    
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90,
+                               vjust = 0.5,
+                               hjust = 0)
+
+  ) +
+  labs( x = "",
+        y = "Enterococci cfu/100 milliliters",
+        caption = "CFU:colony-forming units.
+                  When Enterococci levels exceed 40 cfu/100mL, 
+                  it's not recommended for safe swimming."
+  ) +
+  facet_wrap(~ swim_site, 
+             scales = "free_y",
+             nrow = 10,
+             ncol = 5)
+
+
+```
+
+```{r days-excess-enter, fig.height= 10, fig.width=8}
+
+# 1 if count >=40
+water_quality_weather <-  water_quality_weather |> 
+  mutate(entero_above40 = if_else(enterococci_cfu_100ml >40, 1, 0))
+
+water_quality_weather |> 
+  filter(year == 2024) |> 
+  group_by(swim_site) |> 
+  summarise(days_above40 = sum(entero_above40, na.rm = TRUE)) |> 
+  ungroup() |> 
+  
+  ggplot() + 
+  geom_bar(aes(x = reorder(swim_site, days_above40),
+               y = days_above40), 
+           stat = "identity",
+           fill = "#b33d0b") + 
+  
+  labs(x = "", 
+       y = "Number of days above 40 cfu/100mL",
+       title = "Water quality of Sydney beaches in 2024",
+       subtitle = "Which beach has most days contaminated",
+       caption = "CFU:colony-forming units
+                  When Enterococci levels exceed 40 cfu/100mL, 
+                  it's not recommended for safe swimming."
+  ) + 
+  
+  theme_minimal() + 
+  
+  coord_flip()
+
+ggsave(plot = last_plot(),
+       filename = "../figs/water_beaches_2024.jpeg",
+)
+
+```
+
+        
+
+
+```{r eda-rain}
+
+water_quality_weather |> 
+  distinct(date, precipitation_mm) |> 
+  ggplot() + 
+  geom_point(aes(x = date, 
+                 y = precipitation_mm))
+
+```
+
+```{r eda-enter-time}
+
+water_quality_weather |> 
+  ggplot() +
+  geom_jitter(aes(x = date, 
+                  y = enterococci_cfu_100ml))
+
+
+water_quality_weather |> 
+  group_by(date) |> 
+  summarise(max_enteroc = max(enterococci_cfu_100ml, na.rm = TRUE)) |> 
+  ungroup() |> 
+  arrange(date) |> 
+  
+  ggplot() +
+  
+  geom_point(aes(x = date, 
+                 y = max_enteroc)) 
+
+# days with unsafe water
+# recent years
+prop_days <- water_quality_weather |> 
+  filter(year >=2018) |> 
+  group_by(date) |> 
+  summarise(max_enteroc = max(enterococci_cfu_100ml, na.rm = TRUE)) |> 
+  ungroup() |> 
+  arrange(date) |> 
+  
+  distinct(date, .keep_all = TRUE) |> 
+  
+  mutate(days_above40 = if_else(max_enteroc >40, 1, NA),
+         total_above40 = sum(days_above40, na.rm = TRUE),
+         days = n(),
+         prop_days = round(100*(total_above40/days))) |> 
+  
+  select(prop_days) |> 
+  slice_head(n=1) |> 
+  unlist()
+
+
+
+```
+
+
+```{r plot-water-qaul-time, fig.width=9, fig.height=6}
+
+
+# recent years
+water_quality_weather |> 
+  filter(year >=2018) |> 
+  group_by(date) |> 
+  mutate(max_enteroc = max(enterococci_cfu_100ml, na.rm = TRUE)) |> 
+  ungroup() |> 
+  arrange(date) |> 
+  
+  distinct(date, .keep_all = TRUE) |> 
+  
+  #filter(max_enteroc >40) |> 
+  
+  filter(max_enteroc >0) |> 
+  
+  select(swim_site, date, max_enteroc) |> 
+  
+  ggplot() +
+  
+  geom_point(aes(x = date, 
+                 y = max_enteroc,
+                 colour = max_enteroc)) +
+  
+  scale_colour_gradient(low = "#83b8ca", 
+                         high = "#1f3d48",
+                        guide = "none") + 
+
+  scale_x_date(limits = c(as.Date("2018-01-01"), as.Date("2025-04-30")),
+               date_breaks = "3 months",
+               date_labels = "%b %Y",
+               expand = c(0.0,0.0)) + 
+  
+  scale_y_continuous(limits = c(0,45000),
+                     expand = c(0.15,0)) + 
+  
+  labs(x = "", 
+       y = "Maximum enterococci cfu/100mL",
+       title = "Number of days with unsafe water quality at a Sydney beach",
+       subtitle = "Is contamination getting worse over time?",
+       caption = paste(prop_days,"% of days had at least one measure >40 cfu/100mL.
+                       CFU: colony-forming units.
+                       Unsafe for swimming is Enterococci levels >40 cfu/100mL."),
+       colour =  ""
+
+  ) +
+  
+  theme_minimal() + 
+  
+  theme(
+    
+    axis.text.x = element_text(angle = 90, 
+                               vjust = 0.4)
+  )
+
+
+ggsave(plot = last_plot(),
+       filename = "../figs/water_quality_time.jpeg",
+       dpi = 300)
+
+
+```
+
+
+
+
+```{r precip-time}
+
+water_quality_weather$month <-  lubridate::month(water_quality_weather$date)
+water_quality_weather$month <-  as.character(water_quality_weather$month)
+water_quality_weather$year <-  as.character(water_quality_weather$year)
+
+water_quality_weather$year_mon_dte <-  as.Date(paste(water_quality_weather$year, water_quality_weather$month,"01" , sep="-"))
+
+water_quality_weather |> 
+  group_by(year_mon_dte) |> 
+  summarise(mean_precip = mean(precipitation_mm, na.rm = TRUE)) |> 
+
+  ggplot(aes(x = year_mon_dte, 
+                 y = mean_precip,
+                 group = 1)) + 
+  
+  scale_x_date(date_breaks  = "1 year",
+               date_labels  = "%Y") + 
+  
+  geom_point(size = 0.5,
+             colour = "lightgrey") + 
+  geom_line(size = 0.7, 
+            colour = "darkblue") + 
+  
+  labs(x = "", 
+       y = "Mean monthly precipitation (mm)") + 
+  
+  theme_minimal() + 
+  
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+
+
+
+```{r process-months}
+
+# Convert numeric month to character month name
+water_quality_weather <- water_quality_weather %>%
+  mutate(month_name = case_when(
+    month == 1 ~ "January",
+    month == 2 ~ "February",
+    month == 3 ~ "March",
+    month == 4 ~ "April",
+    month == 5 ~ "May",
+    month == 6 ~ "June",
+    month == 7 ~ "July",
+    month == 8 ~ "August",
+    month == 9 ~ "September",
+    month == 10 ~ "October",
+    month == 11 ~ "November",
+    month == 12 ~ "December",
+    TRUE ~ NA_character_
+  ),
+  month_name = factor(month_name, 
+                      levels = c("January", "February", "March", "April", "May", "June",
+                                 "July", "August", "September", "October", "November", "December"),
+                      ordered = TRUE))
+```
+
+
+```{r precip-month-boxes}
+
+## boxplot all data
+plot1 <- water_quality_weather |> 
+
+  ggplot(aes(x = month_name,
+             y = precipitation_mm)) + 
+  
+  geom_boxplot(outliers = TRUE,
+               colour = "royalblue") +
+  
+  labs(x        = "", 
+       y        = "Precipitation (mm)", 
+      # title    = "Water Quality at Sydney Beaches",
+      # subtitle = "Promise and pitfalls or boxplots",
+       caption  = "All data included"
+       ) + 
+  
+  theme_minimal() + 
+  
+  coord_flip()
+
+## boxplot no outliers
+plot2 <- water_quality_weather |> 
+
+  ggplot(aes(x = month_name,
+             y = precipitation_mm)) + 
+  
+  labs(x = "", 
+       y = "Precipitation (mm)") + 
+  
+  geom_boxplot(outliers = FALSE,
+               colour = "darkorange") +
+  
+  labs(x        = "", 
+       y        = "Precipitation (mm)", 
+       #title    = "Water Quality at Sydney Beaches",
+       #subtitle = "Promise and pitfalls or boxplots",
+       caption  = "Outliers not displayed"
+       ) + 
+  
+  theme_minimal() + 
+  
+  coord_flip()
+
+# boxplot no outliers but same scale as all data
+plot3 <- water_quality_weather |> 
+
+  ggplot(aes(x = month_name,
+             y = precipitation_mm)) + 
+  
+  labs(x = "", 
+       y = "Precipitation (mm)") + 
+  
+  geom_boxplot(outlier.shape =  NA,
+               colour = "darkgreen") +
+  
+  labs(x        = "", 
+       y        = "Precipitation (mm)", 
+      # title    = "Water Quality at Sydney Beaches",
+      # subtitle = "Promise and pitfalls or boxplots",
+       caption  = "Outliers not displayed but scale kept the same"
+       ) + 
+  
+  theme_minimal() + 
+  
+  coord_flip()
+
+# rescale y
+plot4 <- water_quality_weather |> 
+  
+  filter(precipitation_mm >0) |> 
+
+  ggplot(aes(x = month_name,
+             y = precipitation_mm)) + 
+  
+  labs(x = "", 
+       y = "Precipitation (mm)") + 
+  
+  geom_boxplot(colour = "darkred") +
+  
+  scale_y_continuous(trans = scales::transform_log10()) + 
+  
+  labs(x        = "", 
+       y        = "Precipitation (mm)", 
+     #  title    = "Water Quality at Sydney Beaches",
+      # subtitle = "Promise and pitfalls or boxplots",
+       caption  = "All data. \n Precipitation on log 10 scale. \n Zero rain fall days removed."
+       ) + 
+  
+  theme_minimal() + 
+  
+  coord_flip()
+
+```
+
+
+
+```{r patch-boxes}
+
+
+plot1 + plot2 + plot3 + plot4 + 
+  
+  plot_layout(axes = "collect") + 
+  plot_annotation(
+       title    = "Water Quality at Sydney Beaches",
+       subtitle = "Promise and pitfalls or boxplots")
+
+ggsave(
+  filename = "../figs/water_quality_boxplots.jpeg", 
+  plot = last_plot()
+)
+
+
+```
+
+
+```{r tile-plot, include = TRUE, fig.width=10, fig.height=10}
+
+my_monthly_precip <- water_quality_weather |> 
+  group_by(swim_site, month_name) |> 
+  summarise(days_above40 = sum(entero_above40, na.rm = TRUE)) |> 
+  arrange(swim_site, month_name) |> 
+  ungroup()
+
+length(unique(water_quality_weather$swim_site))  ## 79 unique swim sites
+12*length(unique(water_quality_weather$swim_site)) ## 79 sites * 12 months = 948 rows
+nrow(my_monthly_precip)   # 919 rows
+
+my_expand <-  my_monthly_precip |> 
+  expand(swim_site, month_name)
+
+my_monthly_precip <- full_join(my_monthly_precip, my_expand, by= c("swim_site", "month_name"))
+summary(my_monthly_precip)
+
+
+my_monthly_precip |> 
+  ggplot() + 
+  
+  geom_tile(aes(x = month_name, 
+                y = reorder(swim_site, -days_above40),
+                fill = days_above40)) + 
+  
+  scale_fill_gradient(low = "lightblue", 
+                      high = "darkblue",
+                      na.value = "lightgrey") + 
+  
+  labs(x = "",
+       y = "",
+       fill = "Days above 40",
+       title = "Water Quality at Sydney Beaches",
+       caption = "Unsafe for swimming is Enterococci levels >40 cfu/100mL. \nCFU: colony-forming units.") + 
+  
+  theme_minimal() + 
+  theme(
+    
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.25),
+    axis.text.y = element_text(size = 7)
+  )
+
+
+ggsave(
+  filename = "../figs/water_quality_tileplot.jpeg", 
+  plot = last_plot()
+)
+
+```
+
+
+## END
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

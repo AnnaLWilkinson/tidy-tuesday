@@ -1,0 +1,130 @@
+---
+title: "tidy-tuesday"
+subtitle: "Burnet Institute Coding and Software Club"
+author: "Anna Wilkinson; anna.wilkinson@burnet.edu.au"
+output: 
+  html_document:
+    code_folding: show
+date: "2025-03-04"
+---
+
+
+### Tidy Tuesday  - Coding and Software Club - Coding Challenge
+
+#### README: https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-03-04
+
+Long Beach Animal Shelter
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      include = TRUE,
+                      warning = FALSE,
+                      message = FALSE,
+                      cache = FALSE
+                        )
+options(scipen = 9999999)
+```
+
+```{r libraries}
+pacman::p_load(rio, 
+               here, 
+               tidyverse,
+               janitor,
+               lubridate,
+               gtsummary,
+               tidytuesdayR,
+               tidycensus, 
+               scales,
+               colorspace,
+               gghighlight,
+               MetBrewer
+               )
+```
+
+```{r load-data}
+# Using R
+# Option 1: tidytuesdayR R package 
+## install.packages("tidytuesdayR")
+
+tuesdata <- tidytuesdayR::tt_load('2025-03-04')
+## OR
+tuesdata <- tidytuesdayR::tt_load(2025, week = 9)
+
+longbeach <- tuesdata$longbeach
+```
+
+
+
+```{r summary}
+summary(longbeach)
+```
+
+
+```{r process-date}
+
+longbeach <-  longbeach |> 
+  mutate(intake_monyr = zoo::as.yearmon(intake_date))
+
+with(longbeach, table(intake_monyr, useNA = 'always' ))
+
+longbeach <-  longbeach |> 
+  mutate(intake_mon = lubridate::month(intake_date))
+
+with(longbeach, table(intake_mon, useNA = 'always'))
+
+longbeach |> 
+  group_by(intake_mon) |> 
+  summarise(n = n()) |> 
+  ggplot() +
+  geom_bar(aes(x = factor(intake_mon),
+               y = n),
+           stat = "identity")
+
+```
+
+```{r intake-time-plot, fig.width=9, fig.height=6}
+
+
+summary(longbeach$intake_date)
+
+longbeach |>
+  group_by(intake_date, intake_mon) |> 
+  summarise(n_intakes = n()) |> 
+  ggplot() + 
+  geom_point(aes(x = intake_date,
+                 y = n_intakes,
+                 colour = factor(intake_mon)),
+              stat = "identity") +
+  
+  gghighlight(intake_mon %in% c(4:6),
+              unhighlighted_params = list(colour = "lightgrey"),
+              use_direct_label = FALSE) + 
+  
+  scale_x_date(breaks = seq(min(longbeach$intake_date), 
+                            max(longbeach$intake_date), 
+                            by = "6 months")) + 
+    
+  scale_colour_manual(values = met.brewer(name = "Homer1"),
+                      labels = c("April", "May", "June")) +
+
+  labs(y = "Number of intakes(n)",
+       x = "",
+       colour = "",
+       title = "Long Beach Animal Shelter",
+       subtitle = "Is there seasonality in intakes?" ) + 
+  theme_minimal()  +
+  theme(
+    
+    axis.text.x = element_text(angle = 90, vjust = 0)
+  ) 
+
+ggsave("LongBeach.jpeg", 
+       dpi = 300,
+       width = 30, 
+       height = 20, 
+       units = "cm")
+
+
+
+```
+
