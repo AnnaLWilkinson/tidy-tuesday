@@ -223,7 +223,7 @@ my_plot
 
 # Save plot ---------------------------------------------------------------
 
-ggsave(filename = here::here("2026", "2026-01-27", "202601127.png"),
+ggsave(filename = here::here("2026", "2026-01-27", "20260127.png"),
        plot = my_plot)
 
 ## END
