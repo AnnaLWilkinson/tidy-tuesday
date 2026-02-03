@@ -26,6 +26,7 @@ library(sysfonts)
 library(showtextdb)
 library(showtext)
 library(paletteer)
+library(fontawesome)
 conflicted::conflicts_prefer(dplyr::select)
 conflicted::conflicts_prefer(dplyr::filter)
 
@@ -132,7 +133,9 @@ legend("top",
 
 # Waffle plot -------------------------------------------------------------
 
-my_colors <- paletteer::paletteer_d("lisa::FridaKahlo")
+#my_colors <- paletteer::paletteer_d("lisa::FridaKahlo")
+my_palette_function <- colorRampPalette(c("navy", "lightblue"))
+my_colors <-  my_palette_function(5)
 
 water <- edible_plants |> 
   summarise(n = n(), .by = water) |> 
@@ -165,7 +168,10 @@ water_waffle <-  water |>
 
 ## waffle plot function
 
-font_add(family = "FontAwesome", regular = "fa-solid-900.ttf")
+sysfonts::font_add(family = "FontAwesome", regular = "fa-solid-900.ttf")
+library(showtext)
+showtext_auto()
+
 waffle_plot <- function(number, colour, colour_palette, symbol, symbol_size=8) {
   p <- expand.grid(x = 0:9,
                    y = 0:9) %>%
@@ -193,10 +199,26 @@ waffle_plot <- function(number, colour, colour_palette, symbol, symbol_size=8) {
 waffle_plot(number = water_waffle$number,
             colour = water_waffle$water,
             colour_palette = my_colors,
-            symbol = '\uf0c8', symbol_size=7) +
-  labs(caption='Water requirements prevalence among edible plants') 
+            symbol = '\uf0c8', symbol_size=11) +   ## \uf0c8 is a private use area unicode for icons
+  labs(caption='Water requirements proportions among edible plants') 
 
 
 
+# Save plot ---------------------------------------------------------------
 
+waffle_plot <- waffle_plot(number = water_waffle$number,
+                           colour = water_waffle$water,
+                           colour_palette = my_colors,
+                           symbol = '\uf0c8', symbol_size=11) +   ## \uf0c8 is a private use area unicode for icons
+  labs(caption='Water requirements proportions among edible plants') 
+
+
+ggsave(filename = )
+
+
+ggsave(filename = here::here("2026", "2026-02-03", "20260203.png"),
+       plot = my_plot)
+
+
+## END
 
