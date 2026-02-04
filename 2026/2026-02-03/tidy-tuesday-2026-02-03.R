@@ -199,7 +199,7 @@ waffle_plot <- function(number, colour, colour_palette, symbol, symbol_size=8) {
 waffle_plot(number = water_waffle$number,
             colour = water_waffle$water,
             colour_palette = my_colors,
-            symbol = '\uf0c8', symbol_size=11) +   ## \uf0c8 is a private use area unicode for icons
+            symbol = '\uf0c8', symbol_size=20) +   ## \uf0c8 is a private use area unicode for icons
   labs(caption='Water requirements proportions among edible plants') 
 
 
@@ -213,11 +213,11 @@ waffle_plot <- waffle_plot(number = water_waffle$number,
   labs(caption='Water requirements proportions among edible plants') 
 
 
-ggsave(filename = )
-
-
 ggsave(filename = here::here("2026", "2026-02-03", "20260203.png"),
-       plot = my_plot)
+       plot = waffle_plot,
+       width = 10,
+       height = 10, 
+       dpi = 300)
 
 
 ## END
