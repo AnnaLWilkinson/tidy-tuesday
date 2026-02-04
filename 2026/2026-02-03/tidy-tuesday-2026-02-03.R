@@ -199,7 +199,7 @@ waffle_plot <- function(number, colour, colour_palette, symbol, symbol_size=8) {
 waffle_plot(number = water_waffle$number,
             colour = water_waffle$water,
             colour_palette = my_colors,
-            symbol = '\uf0c8', symbol_size=20) +   ## \uf0c8 is a private use area unicode for icons
+            symbol = '\uf0c8', symbol_size=15) +   ## \uf0c8 is a private use area unicode for icons
   labs(caption='Water requirements proportions among edible plants') 
 
 
