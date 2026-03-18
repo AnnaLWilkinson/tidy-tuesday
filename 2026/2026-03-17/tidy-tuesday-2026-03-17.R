@@ -127,9 +127,13 @@ monthly_losses_data_area %>%
 
 
 
+# Save the plot -----------------------------------------------------------
+
+ggsave(filename = here::here("2026", "2026-03-17", "20260317.png"),
+       plot = last_plot())
 
 
- 
+## END
  
  
 
