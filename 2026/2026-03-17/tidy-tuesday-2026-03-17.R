@@ -16,7 +16,9 @@ pacman::p_load(rio,
                here,
                tidyverse,
                janitor,
-               patchwork)
+               patchwork,
+               scales,
+               paletteer)
 
 
 # Import data -------------------------------------------------------------
@@ -80,6 +82,49 @@ monthly_losses_data_area %>%
                y = number), 
            stat = "identity") + 
   facet_wrap(~ loss_cat, scales = "free_y")
+
+
+
+
+# Pretty plot -------------------------------------------------------------
+
+labels <- c("dead"      = "Dead", 
+            "discarded" = "Discarded",
+            "escaped"   = "Escaped", 
+            "other"     = "Other")
+
+monthly_losses_data_area %>% 
+  summarise(across(dead:other, sum), .by = monyear) %>% 
+  pivot_longer(-monyear,
+               names_to = "loss_cat",
+               values_to = "number") %>% 
+  
+  ggplot() + 
+  geom_bar(aes(x = monyear, 
+               y = number,
+               fill = fct_relevel(loss_cat, "dead", "other", "discarded", "escaped")), 
+           stat = "identity") + 
+  
+  scale_x_date(date_breaks = "6 months",
+               date_labels = "%b %Y") + 
+  scale_y_continuous(labels = label_number(scale_cut = cut_short_scale())) + 
+  scale_fill_paletteer_d("nbapalettes::supersonics_holiday") +
+  labs(x = "", 
+       y = "Frequency (n)", 
+       title = "Norwegian Salmonid losses are mostly mortality \nbut also discarded, escaped, and a lot of 'other'") + 
+  
+  theme_bw() + 
+  
+  theme(
+    
+    axis.text.x = element_text(angle = 310, hjust = 0),
+    legend.position = "none"
+  ) + 
+  
+  facet_wrap(~ fct_relevel(loss_cat, "dead", "other", "discarded", "escaped"), 
+             scales = "free_y",
+             labeller = as_labeller(labels))
+
 
 
 
