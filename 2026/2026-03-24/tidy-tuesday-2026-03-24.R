@@ -78,3 +78,23 @@ pi_digits %>%
   coord_flip()
 
 
+# Pretty plot -------------------------------------------------------------
+
+
+pi_digits %>% 
+  filter(digit_seq == 1) %>% 
+  ggplot() + 
+  geom_point(aes(y = digit_position, 
+                 x = reorder(factor(digit), digit_position))) + 
+  scale_y_continuous(limits = c(0,45),
+                     expand = expansion(add = 0.5),
+                     breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40)) + 
+  coord_flip()
+
+
+
+
+
+
+
+
