@@ -85,12 +85,43 @@ pi_digits %>%
   filter(digit_seq == 1) %>% 
   ggplot() + 
   geom_point(aes(y = digit_position, 
-                 x = reorder(factor(digit), digit_position))) + 
-  scale_y_continuous(limits = c(0,45),
+                 x = reorder(factor(digit), -digit_position)),
+             size = 8,
+             shape = "\u03C0",
+             colour = "navy") + 
+  geom_segment(aes(xend = reorder(factor(digit), -digit_position),
+                   x    = reorder(factor(digit), -digit_position), 
+                   yend = digit_position - 0.2, 
+                   y    = 0 ),
+               linetype = 2, 
+               colour = "navy",
+               size = 0.5) + 
+  scale_y_continuous(limits = c(0,35),
                      expand = expansion(add = 0.5),
-                     breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40)) + 
+                     breaks = c(0, 5, 10, 15, 20, 25, 30, 35)) + 
+  theme_bw() + 
+  theme(
+    
+    panel.grid.major.y  = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    text = element_text(size = 16)
+    
+  ) + 
+
+  labs(title = "When does a number first appear in Pi",
+       x = "",
+       y = "Position when digit first appears") + 
   coord_flip()
 
+
+
+# Save plot ---------------------------------------------------------------
+
+ggsave(filename = here::here("2026", "2026-03-24.png"),
+       plot = last_plot())
+
+
+## END
 
 
 
