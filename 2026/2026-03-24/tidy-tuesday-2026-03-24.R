@@ -117,7 +117,7 @@ pi_digits %>%
 
 # Save plot ---------------------------------------------------------------
 
-ggsave(filename = here::here("2026", "2026-03-04", "2026-03-24.png"),
+ggsave(filename = here::here("2026", "2026-03-24", "20260324.png"),
        plot = last_plot())
 
 
