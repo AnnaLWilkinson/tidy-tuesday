@@ -193,10 +193,26 @@ p <- repairs %>%
 
 
 p_animate <- animate(p,
-        nframes = 200, 
-        fps = 20,
-        renderer = gifski_renderer(loop = TRUE),
-        type = "cairo")  
+        width = 1024,
+        height = 768,
+        nframes = 600,
+        fps = 60,
+        duration = 10,
+        renderer = gifski_renderer(file = "20260407.gif"))  
+
+
+animate(
+  p,
+  width = 1024,
+  height = 768,
+  nframes = 600,
+  fps = 60,
+  duration = 10,
+  renderer = gifski_renderer(file = "avg_life_exp_cont_year.gif")
+)
+
+
+
 anim_save(here::here("2026", "2026-04-07", "20260407.gif"), p_animate)
 
 
