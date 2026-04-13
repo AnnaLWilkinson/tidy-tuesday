@@ -16,6 +16,7 @@ library(ggtext)
 library(lubridate)
 library(janitor)
 library(gganimate)
+library(gifski)
 
 
 # Load data -------------------------------------------------------------
@@ -191,8 +192,12 @@ p <- repairs %>%
   shadow_mark(past = T)
 
 
-animate(p)  
-anim_save(here::here("2026", "2026-04-07", "tidy-tuesday-20260407.gif"), p)
+p_animate <- animate(p,
+        nframes = 200, 
+        fps = 20,
+        renderer = gifski_renderer(loop = TRUE),
+        type = "cairo")  
+anim_save(here::here("2026", "2026-04-07", "20260407.gif"), p_animate)
 
 
 
