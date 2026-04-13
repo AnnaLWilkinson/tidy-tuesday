@@ -14,6 +14,8 @@ library(tidyverse)
 library(showtext)
 library(ggtext)
 library(lubridate)
+library(janitor)
+library(gganimate)
 
 
 # Load data -------------------------------------------------------------
@@ -100,8 +102,98 @@ repairs %>%
   ggplot() + 
   geom_jitter(aes(y = repairability, 
                   x = factor(repair_year)),
-              alpha = 0.4) + 
+              alpha = 0.2) + 
   facet_wrap(~ category)
+
+
+repairs %>% 
+  filter(category %in% c("Bicyles", "Furniture", 
+                         "Household applicances non-electric", "Jewelry", 
+                         "Textile", "Tools non-electric",
+                         "Toys non-electric")) %>% 
+  mutate(repair_year = year(repair_date)) %>% 
+  ggplot() + 
+  geom_jitter(aes(y = repairability, 
+                  x = factor(repair_year)),
+              alpha = 0.3) + 
+  facet_wrap(~ category)
+
+
+
+# Pretty plot -------------------------------------------------------------
+
+repairs %>% 
+  filter(category %in% c("Bicyles", "Furniture", 
+                         "Household applicances non-electric", "Jewelry", 
+                         "Textile", "Tools non-electric",
+                         "Toys non-electric")) %>% 
+  filter(repairability >=1) %>% 
+  mutate(repair_year = year(repair_date)) %>% 
+  ggplot() + 
+  geom_jitter(aes(y = repairability, 
+                  x = factor(repair_year)),
+              alpha = 0.3,
+              colour = "white") + 
+  labs(caption  = "Data: Repair Monitor; Repair Cafes Worldwide",
+       title = "Repair of non-electric items over time",
+       x = "", 
+       y = "Rating of repair ease, from 1 (difficult) to 10 (easy)") +
+  theme_bw() + 
+  theme(
+    axis.text.x = element_text(angle = 270, 
+                               vjust = 0) ,
+    panel.grid = element_blank(),
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0,
+                                size = 12),
+    plot.background = element_rect(fill = "grey30"),
+    panel.background = element_rect(fill = "grey20"),
+    text = element_text(colour = "white"),
+    axis.text = element_text(colour = "white")
+  ) + 
+  facet_wrap(~ category)
+
+
+## animate
+
+p <- repairs %>% 
+  filter(category %in% c("Bicyles", "Furniture", 
+                         "Household applicances non-electric", "Jewelry", 
+                         "Textile", "Tools non-electric",
+                         "Toys non-electric")) %>% 
+  filter(repairability >=1) %>% 
+  mutate(repair_year = year(repair_date)) %>% 
+  ggplot() + 
+  geom_jitter(aes(y = repairability, 
+                  x = factor(repair_year)),
+              alpha = 0.3,
+              colour = "white") + 
+  labs(caption  = "Data: Repair Monitor; Repair Cafes Worldwide",
+       title = "Repair of non-electric items over time",
+       x = "", 
+       y = "Rating of repair ease, from 1 (difficult) to 10 (easy)") +
+  theme_bw() + 
+  theme(
+    axis.text.x = element_text(angle = 270, 
+                               vjust = 0) ,
+    panel.grid = element_blank(),
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0,
+                                size = 12),
+    plot.background = element_rect(fill = "grey30"),
+    panel.background = element_rect(fill = "grey20"),
+    text = element_text(colour = "white"),
+    axis.text = element_text(colour = "white")
+  ) + 
+  facet_wrap(~ category) +
+  gganimate::transition_time(repair_year) + 
+  ease_aes('linear') + 
+  shadow_mark(past = T)
+
+
+animate(p)  
+anim_save(here::here("2026", "2026-04-07", "tidy-tuesday-20260407.gif"), p)
+
 
 
 
