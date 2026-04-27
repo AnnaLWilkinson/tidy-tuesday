@@ -136,7 +136,8 @@ p <- my_australia %>%
   labs(y = "Spending in 2023 USD billions", 
        x = "", 
        caption = "Source: WHO Global Health Expenditure" , 
-       tag = str_wrap("The cost of healthcare to individuals continues to rise", 17)) + 
+       tag = str_wrap("The cost of healthcare to individuals continues to rise", 17),
+       title = "Healthcare costs for Australians") + 
   theme(
     
     plot.margin = margin(30,30,30,30),
