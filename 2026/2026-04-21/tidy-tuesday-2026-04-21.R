@@ -16,6 +16,7 @@ library(janitor)
 library(scales)
 library(cowplot)
 library(grid)
+library(ggtext)
 library(tidyverse)
 
 
@@ -134,7 +135,8 @@ p <- my_australia %>%
                    expand = expansion(mult = c(0, 0))) + 
   labs(y = "Spending in 2023 USD billions", 
        x = "", 
-       caption = "Source: WHO Global Health Expenditure" ) + 
+       caption = "Source: WHO Global Health Expenditure" , 
+       tag = str_wrap("The cost of healthcare to individuals continues to rise", 17)) + 
   theme(
     
     plot.margin = margin(30,30,30,30),
@@ -146,7 +148,8 @@ p <- my_australia %>%
     strip.text.x = element_text(face = "bold",
                                 size = 12),
     strip.background.x = element_rect(fill = "white",
-                                      colour = "darkgrey")
+                                      colour = "darkgrey"),
+    plot.tag.position = c(0.2, 0.8)
 
   ) + 
   facet_wrap(~financing_scheme) 
@@ -159,10 +162,10 @@ p
 ggdraw(p) + 
   draw_text(
     x = 0.6, 
-    y = 0.65, 
+    y = 0.62, 
     size = 12,
     hjust = 0,
-    text = str_wrap("Policy changes occurred 1 July 2012 to incentise uptake of private health insurance", 15),
+    text = str_wrap("Policy changes occurred 1 July 2012 to incentise uptake of private health insurance", 17),
     colour= "navy"
   ) +
   
@@ -171,6 +174,7 @@ ggdraw(p) +
       x1 = 0.62, y1 = 0.54,
       x2 = 0.72, y2 = 0.48,
       curvature = 0.3,
+      gp = gpar(lwd = 1.8, fill = "navy", colour = "navy"),
       arrow = arrow(type = "closed", length = unit(0.07, "inches"))
     ))
 
