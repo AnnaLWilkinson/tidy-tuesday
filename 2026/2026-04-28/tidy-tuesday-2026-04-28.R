@@ -14,6 +14,7 @@ library(here)
 library(janitor)
 library(lubridate)
 library(tidyverse)
+library(amerika)
 
 
 
@@ -87,5 +88,50 @@ tariff_agricultural %>%
                  size = n))
 
 
-##
+
+# Create administration dataframe -----------------------------------------
+us_administrations <- tibble(
+  year = 1989:2024
+) %>%
+  mutate(
+    administration = case_when(
+      year >= 1989 & year <= 1992 ~ "George H. W. Bush",
+      year >= 1993 & year <= 2000 ~ "Clinton",
+      year >= 2001 & year <= 2008 ~ "George W. Bush",
+      year >= 2009 & year <= 2016 ~ "Obama",
+      year >= 2017 & year <= 2020 ~ "Trump",
+      year >= 2021 & year <= 2024 ~ "Biden"
+    ),
+    party = case_when(
+      administration %in% c("Clinton", "Obama", "Biden") ~ "Democratic",
+      administration %in% c("George H. W. Bush", "George W. Bush", "Trump") ~ "Republican"
+    )
+  )
+
+us_administrations
+
+
+# Join administration to tariffs ------------------------------------------
+tariff_agricultural <- tariff_agricultural %>% 
+  mutate(year = year(begin_effective_date))
+tabyl(tariff_agricultural, year)
+
+
+tariff_agricultural <- left_join(tariff_agricultural, us_administrations, by = "year")
+
+tariff_agricultural %>% 
+  drop_na(c(begin_effective_date, agreement_full)) %>% 
+  filter(begin_effective_date >'1994-01-01') %>% 
+  summarise(n = n(), .by = c(party, begin_effective_date,agreement_full)) %>% 
+  ggplot() +
+  geom_point(aes(x = begin_effective_date,
+                 y = agreement_full,
+                 size = n,
+                 colour = party)) + 
+  scale_colour_manual(values = c("Republican" = "#E81B23",
+                                 "Democratic" = "#00AEF3"))
+
+
+
+
 
