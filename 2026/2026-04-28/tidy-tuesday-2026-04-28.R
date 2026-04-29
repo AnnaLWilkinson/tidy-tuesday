@@ -133,5 +133,54 @@ tariff_agricultural %>%
 
 
 
+# Pretty plot -------------------------------------------------------------
+
+# organise agreements
+agreement_order <- tariff_agricultural %>% 
+  summarise(first_date = min(begin_effective_date), .by = agreement_full) %>%  
+  arrange(first_date) %>% 
+  distinct(agreement_full) %>%  
+  pull(agreement_full) 
+
+
+tariff_agricultural %>% 
+  drop_na(c(begin_effective_date, agreement_full)) %>% 
+  filter(begin_effective_date >'1994-01-01') %>% 
+  mutate(agreement_full = fct_relevel(agreement_full, agreement_order)) %>% 
+  summarise(n = n(), .by = c(party, begin_effective_date,agreement_full)) %>% 
+  ggplot() +
+  geom_point(aes(x = begin_effective_date,
+                 y = agreement_full,
+                 size = n,
+                 colour = party)) + 
+  scale_x_date(breaks = "3 years",
+               date_labels = "%Y") + 
+  scale_colour_manual(values = c("Republican" = "#E81B23",
+                                 "Democratic" = "#00AEF3")) + 
+  labs(y = "", 
+       x  = "", 
+       tag = str_wrap("Is there a flurry of beginning tariff agreements 
+                      when administrations change?", 40),
+       caption = 'Source: USITC Tariff Database') + 
+  theme(
+    panel.background = element_rect(fill = "white"),
+    plot.background = element_rect(fill = "lightgrey"),
+    plot.margin = margin(t = 50,r = 10,b = 10,l = 10),
+    plot.tag.position = c(0.6, 1.03),
+    legend.position = "none"
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
