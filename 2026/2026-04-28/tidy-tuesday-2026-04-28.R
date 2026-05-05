@@ -163,10 +163,13 @@ tariff_agricultural %>%
                       when administrations change?", 40),
        caption = 'Source: USITC Tariff Database') + 
   theme(
+    
+    axis.text = element_text(colour = "white",
+                             face = "bold"),
     panel.background = element_rect(fill = "white"),
     plot.background = element_rect(fill = "lightgrey"),
     plot.margin = margin(t = 50,r = 10,b = 10,l = 10),
-    plot.tag.position = c(0.6, 1.03),
+    plot.tag.position = c(0.55, 0.9),
     legend.position = "none"
   )
 
