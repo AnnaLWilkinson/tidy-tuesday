@@ -152,14 +152,15 @@ tariff_agricultural %>%
   geom_point(aes(x = begin_effective_date,
                  y = agreement_full,
                  size = n,
-                 colour = party)) + 
+                 colour = party),
+             alpha = 0.5) + 
   scale_x_date(breaks = "3 years",
                date_labels = "%Y") + 
   scale_colour_manual(values = c("Republican" = "#E81B23",
                                  "Democratic" = "#00AEF3")) + 
   labs(y = "", 
        x  = "", 
-       tag = str_wrap("Is there a flurry of beginning tariff agreements 
+       tag = str_wrap("Is there a flurry of tariff activity 
                       when administrations change?", 40),
        caption = 'Source: USITC Tariff Database') + 
   theme(
@@ -169,15 +170,20 @@ tariff_agricultural %>%
     panel.background = element_rect(fill = "white"),
     plot.background = element_rect(fill = "lightgrey"),
     plot.margin = margin(t = 50,r = 10,b = 10,l = 10),
-    plot.tag.position = c(0.55, 0.9),
+    plot.tag.position = c(0.55, 0.95),
+    plot.tag = element_text(colour = "grey30", size = 18),
     legend.position = "none"
   )
 
 
 
+# Save plot ---------------------------------------------------------------
+
+ggsave(filename = "2026/2026-04-28/20260428.png",
+       plot = last_plot())
 
 
-
+## END
 
 
 
