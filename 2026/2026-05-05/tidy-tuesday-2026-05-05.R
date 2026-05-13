@@ -80,9 +80,27 @@ lapply(c("Sugar", "Glucose", "Coffee_substitute", "Seed_oil",
   
   
 
+food_beverages %>% 
+  pivot_longer(cols = -Year, 
+               values_to = "amount",
+               names_to = "product") %>% 
+  filter(Year >=1951) %>% 
+  ggplot() + 
+    geom_line(aes(x = Year, 
+                  y = amount,
+                  group = product)) + 
+    facet_grid(~ product)
 
 
 
-
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
 
