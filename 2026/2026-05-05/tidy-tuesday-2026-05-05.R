@@ -89,7 +89,11 @@ food_beverages %>%
     geom_line(aes(x = Year, 
                   y = amount,
                   group = product)) + 
-    facet_grid(~ product)
+    facet_wrap(~ product,
+               nrow = 2)
+
+# Pretty plot -------------------------------------------------------------
+
 
 
 
