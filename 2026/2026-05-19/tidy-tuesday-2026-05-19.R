@@ -77,6 +77,12 @@ member_participation_stats_by_country <-    member_participation_stats_by_countr
   ))
 tabyl(member_participation_stats_by_country, region_id, region_descr)
 
+#ISO 3166-1 alpha-3 taxonomy
+
+member_participation_stats_by_country <- member_participation_stats_by_country %>% 
+  mutate(country_name = countrycode::countrycode(iso3_code, 
+                        origin = "iso3c",
+                        destination = "country.name"))
 
 # Exploratory analysis ----------------------------------------------------
 
@@ -123,11 +129,64 @@ member_participation_stats_by_country %>%
                  y = total_members,
                  colour= iso3_code), 
              stat = "identity") + 
-  facet_wrap(~ iso3_code, 
+  facet_wrap(~ country_name, 
              scales = "free_y")
 
 
+member_participation_stats_by_country %>% 
+  filter(region_id == "EAS") %>% 
+  ggplot() + 
+  geom_point(aes(x = current_up_to, 
+                 y = total_members,
+                 colour= iso3_code), 
+             stat = "identity") + 
+  facet_wrap(~ country_name, 
+             scales = "free_y")
 
 
+# stratify by total members
+eas_tot_members_quant <- member_participation_stats_by_country %>% 
+ filter(region_id == "EAS") %>% 
+  group_by(iso3_code) %>% 
+  filter(current_up_to == max(current_up_to)) %>% 
+  distinct(current_up_to, total_members) %>% 
+  ungroup() %>% 
+  arrange(-total_members) %>% 
+  pull(total_members) %>% 
+  quantile()
 
 
+eas_tot_members_quant_grps <- member_participation_stats_by_country %>% 
+  filter(region_id == "EAS") %>% 
+  group_by(iso3_code) %>% 
+  filter(current_up_to == max(current_up_to)) %>% 
+  distinct(current_up_to, total_members) %>% 
+  mutate(
+      total_members_quant = case_when(
+      total_members >=eas_tot_members_quant[1] & total_members <eas_tot_members_quant[2] ~   1 ,
+      total_members >=eas_tot_members_quant[2] & total_members <eas_tot_members_quant[3] ~   2 ,
+      total_members >=eas_tot_members_quant[3] & total_members <eas_tot_members_quant[4] ~   3 ,
+      total_members >=eas_tot_members_quant[4] & !is.na(total_members) ~   4 ,
+    
+  ))
+
+my_list <- list()
+for (num in 1:4) {
+  
+    my_list[[num]]  <- eas_tot_members_quant_grps %>% 
+      filter(total_members_quant == num) %>% 
+      pull(iso3_code)
+}
+
+my_list[1]
+
+# filter to first quantile total members in EAS only
+member_participation_stats_by_country %>% 
+  filter(iso3_code %in% my_list[[1]]) %>% 
+  ggplot() + 
+  geom_point(aes(x = current_up_to, 
+                 y = total_members,
+                 colour= iso3_code), 
+             stat = "identity") + 
+  facet_wrap(~ country_name, 
+             scales = "free_y")
