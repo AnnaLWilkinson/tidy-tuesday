@@ -166,7 +166,7 @@ scripture_references %>%
 
 # Save plot ---------------------------------------------------------------
 
-ggsave(filename = here::here("2026", "2026-06-24", "20260623.png"), 
+ggsave(filename = here::here("2026", "2026-06-23", "20260623.png"), 
        plot = last_plot(),
        dpi = 300)
 
