@@ -10,6 +10,7 @@
 
 # Load libraries ----------------------------------------------------------
 library(tidyverse)
+library(showtext)
 library(ggtext)
 
 
@@ -27,6 +28,24 @@ wreck_inventory <- tuesdata$wreck_inventory
 # Option 2: Read directly from GitHub
 
 #wreck_inventory <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2026/2026-06-30/wreck_inventory.csv')
+
+
+
+# Load fonts --------------------------------------------------------------
+
+font_add_google("Oswald")
+font_add_google("Nunito")
+showtext_auto()
+showtext_opts(dpi = 300)
+title_font <- "Oswald"
+body_font <- "Nunito"
+
+
+# Define colours and fonts-------------------------------------------------
+
+bg_col <- "#F2F4F8"
+text_col <- "#151C28"
+highlight_col <- "#991E43"
 
 
 # Summary of the data -----------------------------------------------------
@@ -196,10 +215,12 @@ wreck_inventory %>%
   theme(
     plot.margin = margin(t=10 , b=40 , r=10 , l=10 , unit = "pt"), 
     plot.title.position = "plot",
-    plot.title = ggtext::element_textbox_simple(
+    plot.title = element_textbox_simple(
+      colour = text_col,
       hjust = 0,
       halign = 0,
       margin = margin(b = 5, t = 5),
+      family = title_font,
       face = "bold",
       size = rel(1.5)
     ),
