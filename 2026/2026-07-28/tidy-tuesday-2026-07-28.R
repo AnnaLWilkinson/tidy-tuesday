@@ -87,15 +87,16 @@ base_map +
 ## colours
 org_palette <-  c("#00CFEF", "#F0C419", "#FFF", "#8E44AD")
 
-base_map + 
+map <- base_map + 
   geom_sf(
     data = map_organism_sf,
-    aes(colour = organism_name),
-    alpha = 0.5, 
+    aes(colour = organism_name,
+        alpha = organism_name),
     size = 2.5
   ) + 
   
   scale_colour_manual(values = org_palette) + 
+  scale_alpha_manual(values = c(1,1,1,0.05), guide = "none") + 
   
   coord_sf(
     xlim = c(112, 156), 
@@ -107,8 +108,8 @@ base_map +
     
     legend.position = "inside",
     legend.position.inside = c(0.50, 0.60), 
-    legend.background = element_rect(fill = "transparent"), 
-    legend.key = element_rect(fill = "transparent"),
+    legend.background = element_rect(fill = "transparent", colour = NA), 
+    legend.key = element_rect(fill = "lightblue", colour = NA),
     plot.background = element_rect(fill = "navy", colour = NA), 
     panel.background = element_rect(fill = "navy", colour = NA),
     panel.border = element_blank(),
@@ -133,12 +134,18 @@ base_map +
     scale = 1, 
     dpi = 300, 
     bg = "navy"
-  )
+  ) 
 
+map
 
+# Save --------------------------------------------------------------------
 
+ggview::save_ggplot(
+  file = "2026/2026-07-28/20260728.png",
+  plot = map
+)
 
-
+## END
 
 
 
