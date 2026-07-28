@@ -59,10 +59,10 @@ st_geometry(world)
 base_map <- ggplot(data = world) + 
   geom_sf(fill = "white", 
           colour = "grey50") + 
-  theme_minimal(base_size = 11.5) + 
-  base_map
+  theme_minimal(base_size = 11.5)  
+base_map
 
-# create df of observations of Glowworms
+# create df of observations of organisms
 map_organism <- occurrences %>% 
   select(organism_name,
          obs_lat, 
@@ -85,7 +85,7 @@ base_map +
   )
 
 ## colours
-org_palette <-  c("#00CFEF", "#F0C419", "#003F5C", "#8E44AD")
+org_palette <-  c("#00CFEF", "#F0C419", "#FFF", "#8E44AD")
 
 base_map + 
   geom_sf(
@@ -113,7 +113,7 @@ base_map +
     panel.background = element_rect(fill = "navy", colour = NA),
     panel.border = element_blank(),
     axis.text = element_blank(), 
-    plot.title = element_text(colour = "white", face = "bold"), 
+    plot.title = element_text(colour = "white", face = "bold", size = 20), 
     plot.caption = element_text(colour = "white"),
     plot.margin = margin(c(t=30, r=100, b=100, l=100 , unit = "pt")),
 
