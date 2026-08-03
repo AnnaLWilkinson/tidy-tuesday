@@ -64,12 +64,19 @@ unlink(temp_zip)
 manta_data_raw %>% 
   count(MEDIAN_LIVE_CORAL)
 
+manta_data_raw %>% 
+  count(MEDIAN_SOFT_CORAL)
+
+manta_data_raw %>% 
+count(MEDIAN_DEAD_CORAL)
 
 manta_data <- manta_data_raw %>% 
   janitor::clean_names() %>% 
   dplyr::rename(sector_code = sector,
                 shelf_code  = shelf) %>% 
-  dplyr::mutate(sample_date = lubridate::ymd(sample_date), 
+  dplyr::mutate(
+            sample_date = lubridate::ymd(sample_date), 
+                # sector name
                 sector_name = case_when(
                   sector_code == "CA"   ~ "Cairns",
                   sector_code == "CB"   ~ "Capricorn-Bunker",
@@ -85,25 +92,51 @@ manta_data <- manta_data_raw %>%
                   sector_code == "WH"   ~ "Whitsunday",
                   is.na(sector_code)    ~ NA_character_,
                   TRUE ~ "CHECK"),
-                shelf_name  = case_when(
+                # shelf name
+            shelf_name  = case_when(
                   shelf_code == "I" ~ "Inshore GBR",
                   shelf_code == "M" ~ "Mid-shelf GBR",
                   shelf_code == "O" ~ "Outer-shelf GBR",
                   is.na(shelf_code) ~ NA_character_,
                   TRUE ~ "CHECK"),
-                
-                
-
+                # convert median coral coverage to Table 5 in README
+            across(starts_with("median"), ~ case_when(
+                  . ==  "0"  ~ "0%",
+                  . ==  "1L" ~ ">0-5%",
+                  . ==  "1U" ~ ">5-10%",
+                  . ==  "2L" ~ ">10-20%",
+                  . ==  "2U" ~ ">20-30%",
+                  . ==  "3L" ~ ">30-40%",
+                  . ==  "3U" ~ ">40-50%",
+                  . ==  "4L" ~ ">50-62.5%",
+                  . ==  "4U" ~ ">62.5-75%",
+                  . ==  "5L" ~ ">75-87.5%",
+                  . ==  "5U" ~ ">87.5 - 100%",
+                  . ==   ""  ~ NA_character_,
+                  is.na(.)   ~ NA_character_),
+                  .names = "new_{col}"
                )
-                ))
+            )
 
 
+manta_data %>% 
+  select(median_live_coral, new_median_live_coral) %>% 
+  filter(is.na(new_median_live_coral)) %>% 
+  nrow()
+
+manta_data %>% 
+  select(median_soft_coral, new_median_soft_coral) %>% 
+  filter(is.na(new_median_soft_coral)) %>% 
+  nrow()
 
 
+manta_data %>% 
+  select(median_dead_coral, new_median_dead_coral) %>% 
+  filter(is.na(new_median_dead_coral)) %>% 
+  nrow()
 
 
-
-
+## END
 
 
 
