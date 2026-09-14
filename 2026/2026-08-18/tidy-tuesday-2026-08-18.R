@@ -107,6 +107,13 @@ demo_by_first_language %>%
   geom_smooth(method = lm, formula = y ~ splines::bs(x, 3), se = FALSE)
 
 
-
+demo_by_first_language %>% 
+  ggplot() + 
+  geom_jitter(aes(x = band, 
+                  y = percent)) + 
+  geom_jitter(data = subset(demo_by_first_language, language == "English"), 
+              aes(x = band, 
+                  y = percent), 
+              colour = 'red')
 
 
