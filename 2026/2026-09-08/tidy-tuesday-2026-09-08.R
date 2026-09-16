@@ -128,62 +128,52 @@ df_plot <- cafe |>
             avg_price_gbp = mean(price_gbp, na.rm = TRUE), 
             nobs = n(), .by = country
   ) |> 
-  mutate(ratio_wage_price = avg_price_gbp/avg_hourly_wage_gbp, 
-         ratio_direction = if_else(ratio_wage_price <1, "neg", "pos"))  |> 
+  mutate(cups_per_hr = avg_hourly_wage_gbp/avg_price_gbp)  |> 
   
-  arrange(-nobs) |> 
+  arrange(-cups_per_hr) |> 
   
   mutate(facet = ntile(row_number(), 4)) 
 
 
-
-
   
 ggplot(data = df_plot) + 
+  geom_count(mapping = aes(x = cups_per_hr, 
+                 y = reorder(country, cups_per_hr), 
+                # colour = ratio_direction,
+                 size = nobs),
+             colour = "navy") + 
   
-  geom_rect(data = rect_grid, 
-            mapping = aes(ymin = -Inf, 
-                          ymax = Inf, 
-                          xmin = 0, 
-                          xmax = 1,
-                          group = facet),
-            fill = "grey7") +
-  
-  geom_rect(
-            mapping = aes(ymin = -Inf, 
-                          ymax = Inf, 
-                          xmin = 1, 
-                          xmax = 6,
-                          group = facet),
-            fill = "white") +
-  
-  geom_vline(aes(xintercept = 1)) + 
-  
-  
-  geom_count(mapping = aes(x = ratio_wage_price, 
-                 y = reorder(country, nobs), 
-                 colour = ratio_direction,
-                 size = nobs)) + 
-  
-  scale_size_area(max_size = 5.5,
+  scale_size_area(max_size = 5,
                   guide = "none") + 
   
   scale_y_discrete(expand = c(0.05,0.05)) +
-  scale_x_continuous(expand = c(0.0)) +
-
-  scale_color_manual(values = c("white", "black"), guide = "none") +
+  scale_x_continuous(expand = c(0,1)) +
 
   facet_wrap(~ facet, 
              scales = "free_y") + 
   labs(y = "", 
-       x = "") + 
+       x = "Cups of Cappuccino",
+       title = "Hourly wage of baristas as cups of cappuccino",
+       caption = "Wage and price of cappuccino standardised to Great British Pound") + 
   theme_bw() +
   theme(
     
     plot.margin = margin(t =20, r =20 , b =20 , l =20 , unit = "pt"),
     strip.background = element_blank(),
     strip.text = element_blank(),
-    plot.background = element_rect(fill = "#f5eee7")
+    plot.background = element_rect(fill = "#f5eee7"),
+    panel.grid = element_blank(),
+    panel.grid.major.x = element_line(colour = "lightgrey"),
+    axis.text.y = element_text(colour = "navy"),
+    axis.title.x = element_text(colour = "navy", size = 16),
+    title = element_text(colour = "navy", size = 16)
     
   )
 
+# Save plot ---------------------------------------------------------------
+
+ggsave(filename = here::here("2026", "2026-09-08", "20260908.png"), 
+       plot = last_plot(),
+       dpi = 300)
+
+## END
