@@ -84,6 +84,28 @@ claims_age_gender_clean <- claims_age_gender_raw |>
   )) |> 
   fill(gender, .direction =  "down")
 
+
+
+nondiff <-  claims_age_gender_clean |> 
+  filter(gender == "diff_term") |> 
+  remove_empty("cols") |> 
+  fill(scheme_standardised_claims, .direction = "down") |> 
+  row_to_names(row_number = 3) |> 
+  clean_names() |> 
+  filter(mechanism_of_injury_disease != "Total") |> 
+  pivot_longer(-mechanism_of_injury_disease, 
+               names_to = "financial_year", 
+               values_to = "claims") |> 
+  mutate(financial_year = str_remove_all(financial_year, "x"),
+         claims = as.numeric(str_trim(claims)))
+
+
+
+
+
+
+
+
 new_names <- claims_age_gender_clean |> 
   slice(4) |> 
   janitor::clean_names() |> 
@@ -251,9 +273,5 @@ claims_data_clean <- tibble(
 ))
 
 
-
 ## END
 
-claims_bodily_location_clean |> 
-  ggplot() + 
-  geom_bar
