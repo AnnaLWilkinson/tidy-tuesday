@@ -10,8 +10,6 @@
 
 # Load libraries ----------------------------------------------------------
 
-install.packages("jsonlite")
-install.packages("httr2")
 library(httr2)
 library(jsonlite)
 library(tidyverse)
@@ -168,7 +166,7 @@ claims_bodily_location_clean <-  claims_bodily_location_raw |>
   fill(`Scheme standardised claims`, .direction = "down") |> 
   row_to_names(row_number = 3) |> 
   clean_names() |> 
-  filter(-1 != "Total") |> 
+  filter(bodily_location !="Total") |> 
   pivot_longer(-1, 
                names_to = "financial_year", 
                values_to = "claims") |> 
@@ -189,7 +187,7 @@ claims_agency_of_injury_clean <-  claims_agency_of_injury_raw |>
   fill(`Scheme standardised claims`, .direction = "down") |> 
   row_to_names(row_number = 3) |> 
   clean_names() |> 
-  filter(-1 != "Total") |> 
+  filter(agency_of_injury != "All") |> 
   pivot_longer(-c(1:2), 
                names_to = "financial_year", 
                values_to = "claims") |> 
@@ -208,7 +206,7 @@ claims_occupation_clean <- claims_occupation_raw |>
   fill(`Scheme standardised claims`, .direction = "down") |> 
   row_to_names(row_number = 3) |> 
   clean_names() |> 
-  filter(-1 != "Total") |> 
+  filter(occupation != "Total") |> 
   pivot_longer(-1, 
                names_to = "financial_year", 
                values_to = "claims") |> 
@@ -227,7 +225,7 @@ claims_industry_division_clean <- claims_industry_division_raw |>
   fill(`Scheme standardised claims`, .direction = "down") |> 
   row_to_names(row_number = 3) |> 
   clean_names() |> 
-  filter(-1 != "Total") |> 
+  filter(industry_division != "Total") |> 
   pivot_longer(-1, 
                names_to = "financial_year", 
                values_to = "claims") |> 
@@ -256,4 +254,6 @@ claims_data_clean <- tibble(
 
 ## END
 
-
+claims_bodily_location_clean |> 
+  ggplot() + 
+  geom_bar
