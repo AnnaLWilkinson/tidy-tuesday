@@ -53,7 +53,7 @@ claims_df_raw <-
   mutate(
     data = map(
       name
-      , ~ read_excel(tmp, sheet = .x) %>%
+      , ~ read_excel(tmp, sheet = .x) |>
         remove_empty(which = c('rows', 'cols')) # Get rid of completely empty columns and rows
     )
   )
@@ -63,215 +63,144 @@ sheets
 
 # Process data  -----------------------------------------------------------
 
+## Agency of injury  ------------------------------------------------------
+## Bodily Location  -------------------------------------------------------
+## Industry division  -----------------------------------------------------
+## Injury year  -----------------------------------------------------------
+## Mechanism of injury  ---------------------------------------------------
+## Nature of injury  ------------------------------------------------------
+## Occupation -------------------------------------------------------------
+
+claims_df <-
+  claims_df_raw |>
+  # The column names of the dataframes tell us which dataframes/sheets contained claims data
+  # Hoist pulls out the first column name into `fname`
+  mutate(
+    df_names = map(
+      data
+      , names
+    )
+  ) |>
+  hoist(.col = df_names, fname = 1) |>
+  # Subset to the data frames that contain claims data by filtering on `fname`
+  filter(fname == 'Scheme standardised claims') |>
+  # Age and gender is too different - we'll handle it separately
+  filter(name != 'Age and gender') |>
+  # Fix up the names in the data
+  mutate(
+    data = map(
+        data
+        , ~.x |>
+          # Most sheets have the real column 1 name in row 2. Filling lets us put the value into row 3 so that it can be included when we use row_to_names
+          fill(starts_with('Scheme'), .direction = 'down') |>
+          row_to_names(3) |>
+          clean_names()
+      )
+  ) |>
+  # Get rid of intermediate columns
+  select(-any_of(c('fname', 'df_names', 'glimpse'))) |>
+  # Create a column with tidy data by pivoting year columns
+  mutate(
+    data_tidy = map(
+      data
+      , ~ .x |>
+      pivot_longer(
+        cols = starts_with('x')
+        , names_to = 'financial_year'
+        , values_to = 'claims'
+      ) |>
+      mutate(financial_year = gsub('^x', '', financial_year))
+    )
+    , data_tidy = case_when(
+      name == 'Agency of injury' ~ map(
+        data_tidy
+        , ~.x |> rename_with(~gsub('na', 'subcategory_of_agency', .), starts_with('na'))
+      )
+      , TRUE ~ data_tidy
+    )
+  )
+
+
 ## Age and gender ----------------------------------------------------------
+# We take the age and gender data frame separately because the data is
+# In stacked tables within the sheet
 
-claims_age_gender_raw <- claims_df_raw |> 
-  filter(name == 'Age and gender') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_age_gender_clean <- claims_age_gender_raw |> 
-  janitor::clean_names() |> 
-  mutate(gender = case_when(
-    
-    scheme_standardised_claims == "Female" ~ "female", 
-    scheme_standardised_claims == "Male"   ~ "male", 
-    scheme_standardised_claims == "I use a different term"   ~ "diff_term", 
-    scheme_standardised_claims == "Non-Binary/Gender Diverse" ~ "non_binary_diverse", 
-    scheme_standardised_claims == "Prefer not to say" ~ "prefer_not_say", 
-    scheme_standardised_claims == "Total" ~ "total", 
-    TRUE ~ NA_character_
-  )) |> 
+claims_age_gender_raw <-
+  claims_df_raw |>
+  filter(name == 'Age and gender') |>
+  pull(data) |>
+  pluck(1) |>
+  janitor::clean_names() |>
+  mutate(
+    gender = case_when(
+      scheme_standardised_claims %in% c(
+        "Female"
+        ,"Male"
+        ,"I use a different term"
+        ,"Non-Binary/Gender Diverse"
+        ,"Prefer not to say"
+        ,"Total"
+      ) ~ gsub('[ -/]', '_', tolower(scheme_standardised_claims))
+      , TRUE ~ NA_character_
+    )
+  ) |>
   fill(gender, .direction =  "down")
 
+# Nest the subtables and fix the column names
+# Some column names are duplicated in the raw data
+claims_age_gender_data <-
+  claims_age_gender_raw |>
+  group_by(gender) |>
+  nest() |>
+  filter(!is.na(gender)) |>
+  mutate(
+    data = map(
+      data
+      , ~.x |>
+      fill(scheme_standardised_claims, .direction = 'down') |>
+      row_to_names(3) |>
+      clean_names() |>
+      filter(
+        !grepl('Scheme standardised', age_group)
+        , !grepl('For period', age_group)
+      ) |>
+      remove_empty('cols')
+    )
+  ) |>
+  unnest(data)
 
-
-nondiff <-  claims_age_gender_clean |> 
-  filter(gender == "diff_term") |> 
-  remove_empty("cols") |> 
-  fill(scheme_standardised_claims, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(mechanism_of_injury_disease != "Total") |> 
-  pivot_longer(-mechanism_of_injury_disease, 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims)))
-
-
-
-
-
-
-
-
-new_names <- claims_age_gender_clean |> 
-  slice(4) |> 
-  janitor::clean_names() |> 
-  select(starts_with("x")) |> 
-  mutate(occupation = "age_group",
-         gender = "gender",
-         across(everything(), ~ str_replace_all(., "/", "_"))) |> 
-  select(occupation, starts_with("x"), gender) |> 
-  unlist()
-new_names
-
-claims_age_gender_clean <- claims_age_gender_clean |> 
-  setNames(new_names) |> 
-  slice(-(1:4))
-
-valid_age_group <- claims_age_gender_clean |> 
-  distinct(age_group) |> 
-  filter(str_detect(age_group, "-") | str_detect(age_group, "65+")| str_detect(age_group, "Under 15")| str_detect(age_group, "Not Stated"), 
-         !str_detect(age_group, "Non")) |> 
-  unlist()
-valid_age_group
-
-claims_age_gender_clean <-  claims_age_gender_clean |> 
-  filter(age_group %in% valid_age_group)
-
-claims_age_gender_clean <-  claims_age_gender_clean |> 
-  pivot_longer(-c(age_group, gender), 
-               names_to = "financial_year",
-               values_to = "claims") |> 
-  mutate(claims = stringr::str_trim(claims),
-         claims = as.numeric(claims))
-
-
-## Mechanism of injury -----------------------------------------------------
-
-claims_mechanism_raw <- claims_df_raw |> 
-  filter(name == 'Mechanism of injury') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_mechanism_clean <-  claims_mechanism_raw |> 
-  fill(`Scheme standardised claims`, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(mechanism_of_injury_disease != "Total") |> 
-  pivot_longer(-mechanism_of_injury_disease, 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims))) 
-        
-
-## Nature of injury (affliction) ------------------------------------------
-
-claims_nature_of_injury_raw <- claims_df_raw |> 
-  filter(name == 'Nature of injury (affliction)') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_nature_of_injury_clean <-  claims_nature_of_injury_raw |> 
-  fill(`Scheme standardised claims`, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(nature_of_injury != "Total") |> 
-  pivot_longer(-nature_of_injury, 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims))) 
-
-
-## Bodily location ---------------------------------------------------------
-
-claims_bodily_location_raw <- claims_df_raw |> 
-  filter(name == 'Bodily location') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_bodily_location_clean <-  claims_bodily_location_raw |> 
-  fill(`Scheme standardised claims`, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(bodily_location !="Total") |> 
-  pivot_longer(-1, 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims))) 
-
-
-## Agency of injury --------------------------------------------------------
-
-claims_agency_of_injury_raw <- claims_df_raw |> 
-  filter(name == 'Agency of injury') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_agency_of_injury_raw[1:3, 2] <- "sub_agency_of_injury"
-  
-claims_agency_of_injury_clean <-  claims_agency_of_injury_raw |> 
-  fill(`Scheme standardised claims`, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(agency_of_injury != "All") |> 
-  pivot_longer(-c(1:2), 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims))) 
-
-
-##  Occupation  ------------------------------------------------------------
-
-claims_occupation_raw <- claims_df_raw |> 
-  filter(name == 'Occupation') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_occupation_clean <- claims_occupation_raw |> 
-  fill(`Scheme standardised claims`, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(occupation != "Total") |> 
-  pivot_longer(-1, 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims))) 
-
-
-## Industry division -----------------------------------------------------
-
-claims_industry_division_raw <- claims_df_raw |> 
-  filter(name == 'Industry division') |> 
-  pull(data) |> 
-  pluck(1)
-
-claims_industry_division_clean <- claims_industry_division_raw |> 
-  fill(`Scheme standardised claims`, .direction = "down") |> 
-  row_to_names(row_number = 3) |> 
-  clean_names() |> 
-  filter(industry_division != "Total") |> 
-  pivot_longer(-1, 
-               names_to = "financial_year", 
-               values_to = "claims") |> 
-  mutate(financial_year = str_remove_all(financial_year, "x"),
-         claims = as.numeric(str_trim(claims))) 
-
+# Convert to a data frame with the wide and tidy data
+age_gender_df <-
+  claims_age_gender_data |>
+  mutate(name = 'Age and gender') |>
+  group_by(name) |>
+  nest() |>
+  mutate(
+    data_tidy = map(
+      data
+      , ~.x |>
+      pivot_longer(
+        starts_with('x')
+        , names_to = "financial_year"
+        , values_to = 'claims'
+      ) |>
+      mutate(
+        financial_year = gsub('^x', '', financial_year)
+        , claims = as.integer(str_trim(claims))
+      )
+    )
+  )
 
 # Package up clean dfs -----------------------------------------------------
 
 dfs <- sheets[-c(1:3)]
 
-claims_data_clean <- tibble(
-  name = c(dfs),
-  data = list(
-    tibble(claims_age_gender_clean),
-    tibble(claims_mechanism_clean), 
-    tibble(claims_nature_of_injury_clean),
-    tibble(claims_bodily_location_clean),
-    tibble(claims_agency_of_injury_clean),
-    tibble(claims_occupation_clean),
-    tibble(claims_industry_division_clean)
-    
-))
-
+claims_data_clean <-
+  bind_rows(
+    claims_df
+    , age_gender_df
+  ) |>
+  select(name, data = data_tidy)
 
 ## END
 
