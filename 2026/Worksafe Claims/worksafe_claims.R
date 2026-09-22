@@ -216,13 +216,44 @@ claims_occupation_clean <- claims_occupation_raw |>
          claims = as.numeric(str_trim(claims))) 
 
 
-
-
-
 ## Industry division -----------------------------------------------------
 
+claims_industry_division_raw <- claims_df_raw |> 
+  filter(name == 'Industry division') |> 
+  pull(data) |> 
+  pluck(1)
+
+claims_industry_division_clean <- claims_industry_division_raw |> 
+  fill(`Scheme standardised claims`, .direction = "down") |> 
+  row_to_names(row_number = 3) |> 
+  clean_names() |> 
+  filter(-1 != "Total") |> 
+  pivot_longer(-1, 
+               names_to = "financial_year", 
+               values_to = "claims") |> 
+  mutate(financial_year = str_remove_all(financial_year, "x"),
+         claims = as.numeric(str_trim(claims))) 
+
+
+# Package up clean dfs -----------------------------------------------------
+
+dfs <- sheets[-c(1:3)]
+
+claims_data_clean <- tibble(
+  name = c(dfs),
+  data = list(
+    tibble(claims_age_gender_clean),
+    tibble(claims_mechanism_clean), 
+    tibble(claims_nature_of_injury_clean),
+    tibble(claims_bodily_location_clean),
+    tibble(claims_agency_of_injury_clean),
+    tibble(claims_occupation_clean),
+    tibble(claims_industry_division_clean)
+    
+))
 
 
 
+## END
 
 
