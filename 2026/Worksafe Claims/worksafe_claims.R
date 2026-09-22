@@ -1,13 +1,11 @@
 
 
-
 #  About this script ------------------------------------------------------
 
-#  
-#  
-#  
-
-
+#  Project: Tidy Tuesday
+#  Purpose: Submit WorkSafe data to Tidy Tuesday
+#  Author: Anna Wilkinson; anna.wilkinson@burnet.edu.au
+#  Date started: 22 September 2026
 
 
 # Load libraries ----------------------------------------------------------
