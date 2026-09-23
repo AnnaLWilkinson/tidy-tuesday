@@ -85,58 +85,112 @@ claims_age_gender_clean <- claims_age_gender_raw |>
   fill(gender, .direction =  "down")
 
 
+# Create a df with all valid age groups and all possible years of data
+df_all_age_yr <-  claims_age_gender_clean |> 
+  filter(gender == "female") |> 
+  select(-gender) |> 
+  remove_empty("cols") |> 
+  fill(scheme_standardised_claims, .direction = "down") |> 
+  row_to_names(row_number = 3) |> 
+  clean_names() |> 
+  filter(!str_detect(age_group, c("For period|All"))) |> 
+  filter(str_detect(age_group, "-") | str_detect(age_group, "65+")| str_detect(age_group, "Under 15")| str_detect(age_group, "Not Stated"))  |> 
+  
+  pivot_longer(-age_group, 
+               names_to = "financial_year",
+               values_to = "claims") |> 
+  mutate(financial_year = str_remove_all(financial_year, "x")) |> 
+  distinct(age_group, financial_year)
 
-nondiff <-  claims_age_gender_clean |> 
+
+### I use a different term df
+diff_term <-  claims_age_gender_clean |> 
   filter(gender == "diff_term") |> 
   remove_empty("cols") |> 
   fill(scheme_standardised_claims, .direction = "down") |> 
   row_to_names(row_number = 3) |> 
   clean_names() |> 
-  filter(mechanism_of_injury_disease != "Total") |> 
-  pivot_longer(-mechanism_of_injury_disease, 
+  filter(!str_detect(age_group, c("For period|All"))) |> 
+  rename(gender = diff_term) |> 
+  pivot_longer(-c(age_group, gender), 
                names_to = "financial_year", 
                values_to = "claims") |> 
   mutate(financial_year = str_remove_all(financial_year, "x"),
          claims = as.numeric(str_trim(claims)))
 
 
+# join with all possible age groups and fin years
+diff_term_full <- full_join(df_all_age_yr, diff_term, by = c("age_group", "financial_year"))
 
-
-
-
-
-
-new_names <- claims_age_gender_clean |> 
-  slice(4) |> 
-  janitor::clean_names() |> 
-  select(starts_with("x")) |> 
-  mutate(occupation = "age_group",
-         gender = "gender",
-         across(everything(), ~ str_replace_all(., "/", "_"))) |> 
-  select(occupation, starts_with("x"), gender) |> 
-  unlist()
-new_names
-
-claims_age_gender_clean <- claims_age_gender_clean |> 
-  setNames(new_names) |> 
-  slice(-(1:4))
-
-valid_age_group <- claims_age_gender_clean |> 
-  distinct(age_group) |> 
-  filter(str_detect(age_group, "-") | str_detect(age_group, "65+")| str_detect(age_group, "Under 15")| str_detect(age_group, "Not Stated"), 
-         !str_detect(age_group, "Non")) |> 
-  unlist()
-valid_age_group
-
-claims_age_gender_clean <-  claims_age_gender_clean |> 
-  filter(age_group %in% valid_age_group)
-
-claims_age_gender_clean <-  claims_age_gender_clean |> 
+### Non-binary/gender diverse
+nonbin <-  claims_age_gender_clean |> 
+  filter(gender == "non_binary_diverse") |> 
+  remove_empty("cols") |> 
+  fill(scheme_standardised_claims, .direction = "down") |> 
+  row_to_names(row_number = 3) |> 
+  clean_names() |> 
+  filter(!str_detect(age_group, c("For period|All|Scheme"))) |> 
+  rename(gender = non_binary_diverse) |> 
   pivot_longer(-c(age_group, gender), 
-               names_to = "financial_year",
+               names_to = "financial_year", 
                values_to = "claims") |> 
-  mutate(claims = stringr::str_trim(claims),
-         claims = as.numeric(claims))
+  mutate(financial_year = str_remove_all(financial_year, "x"),
+         claims = as.numeric(str_trim(claims)))
+
+# join with all possible age groups and fin years
+non_bin_full <- full_join(df_all_age_yr, nonbin, by = c("age_group", "financial_year"))
+
+
+### Prefer not to say
+prefnotsay <-  claims_age_gender_clean |> 
+  filter(gender == "prefer_not_say") |> 
+  remove_empty("cols") |> 
+  fill(scheme_standardised_claims, .direction = "down") |> 
+  row_to_names(row_number = 3) |> 
+  clean_names() |> 
+  filter(!str_detect(age_group, c("For period|All|Scheme"))) |> 
+  rename(gender = prefer_not_say) |> 
+  pivot_longer(-c(age_group, gender), 
+               names_to = "financial_year", 
+               values_to = "claims") |> 
+  mutate(financial_year = str_remove_all(financial_year, "x"),
+         claims = as.numeric(str_trim(claims)))
+
+# join with all possible age groups and fin years
+pref_not_say_full <- full_join(df_all_age_yr, prefnotsay, by = c("age_group", "financial_year"))
+
+
+### female and male
+fe_ma <-  claims_age_gender_clean |> 
+  filter(gender == "female" | gender == "male") |> 
+  remove_empty("cols") |> 
+  fill(scheme_standardised_claims, .direction = "down") |> 
+  row_to_names(row_number = 3) |> 
+  clean_names() |> 
+  filter(!str_detect(age_group, c("For period|All|Scheme|Age|Male"))) |> 
+  rename(gender = female) |> 
+  pivot_longer(-c(age_group, gender), 
+               names_to = "financial_year", 
+               values_to = "claims") |> 
+  mutate(financial_year = str_remove_all(financial_year, "x"),
+         claims = as.numeric(str_trim(claims)))
+
+
+### Bind rows
+# all age groups and yrs: nrow = 182; 5 gender categories (female, male, non binary (duplicate year), diff term, pref not say)
+(182*4) + 188  # nrow = 916
+
+claims_age_gender_clean_bind <- bind_rows(fe_ma, pref_not_say_full)
+(182*2) + 182
+nrow(claims_age_gender_clean_bind)
+
+claims_age_gender_clean_bind <- bind_rows(claims_age_gender_clean_bind, non_bin_full)
+546 + 182
+nrow(claims_age_gender_clean_bind)
+
+claims_age_gender_clean_bind <- bind_rows(claims_age_gender_clean_bind, diff_term_full)
+728 + 188
+nrow(claims_age_gender_clean_bind)
 
 
 ## Mechanism of injury -----------------------------------------------------
