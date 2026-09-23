@@ -316,7 +316,7 @@ dfs <- sheets[-c(1:3)]
 claims_data_clean <- tibble(
   name = c(dfs),
   data = list(
-    tibble(claims_age_gender_clean),
+    tibble(claims_age_gender_clean_bind),
     tibble(claims_mechanism_clean), 
     tibble(claims_nature_of_injury_clean),
     tibble(claims_bodily_location_clean),
