@@ -16,7 +16,7 @@ library(showtext)
 library(glue)
 library(ggview)
 library(ggtext)
-
+library(sysfonts)
 
 # Load data ---------------------------------------------------------------
 
@@ -37,6 +37,13 @@ eplp <- tuesdata$eplp
 
 # Load fonts --------------------------------------------------------------
 
+font_add_google("Oswald")
+font_add_google("Nunito")
+showtext_auto()
+showtext_opts(dpi = 300)
+title_font <- "Oswald"
+body_font <- "Nunito"
+
 
 
 
@@ -44,12 +51,13 @@ eplp <- tuesdata$eplp
 
 bg_col <- "#F2F4F8"
 text_col <- "#151C28"
-geom_palette <-  c("Not applicable" = "#BDBDBD","mothers" = "#E69F00", "either" = "#0072B2")
 
 
 # Define text -------------------------------------------------------------
 
-title = "European Parenting Leave Policies"
+# anything in curly braces is interpreted as R code
+
+title = glue('<span style="font-family:{title_font}; font-size:17pt;">**European Parenting Leave Policies**</span>')
 st    = "The European Parenting Leave Policies (EPLP) Dataset provides harmonised data on maternity, co-parent, paid parental, and job-protected leave regulations across 21 European countries from 1970 to 2024."
 cap   = "Source:"
 
@@ -90,25 +98,42 @@ eplp_whom$country_name_fct = factor(eplp_whom$country_name, levels = c(country_o
 
 
 eplp_whom |> 
+  mutate(par1_for_whom = stringr::str_to_sentence(par1_for_whom)) |> 
   ggplot() + 
   geom_point(aes(x = year, 
                  y = country_name_fct, 
                  group = 1,
                  fill= par1_for_whom),
-             size = 4.5,
+             size = 3,
              shape = 21) + 
-  scale_fill_manual(values = geom_palette) + 
+  scale_fill_manual(values =  c("Not applicable" = "#BDBDBD",
+                                "Mothers" = "#E69F00", 
+                                "Either" = "#0072B2")) +
+
   scale_y_discrete(limits = rev) + 
+  labs(x = "", 
+       y = "", 
+       fill = "",
+       title = title) +
   theme_minimal(base_size = 10) + 
   theme(
     
     panel.grid = element_blank(), 
-    plot.title = element_textbox_simple()
+    plot.background = element_rect(fill = bg_col),
+    plot.title = element_textbox_simple(
+      colour = text_col,
+      size = rel(1),
+      margin = margin(b = 5, t = 5)
+    )
   ) + 
-  labs(x = "", 
-       y = "", 
-       fill = "",
-       title = title)
+  coord_cartesian(ylim = c(25, 0.5)) + 
+  canvas(
+    width = 9, height = 9,
+    units = "in", bg = bg_col,
+    dpi = 300
+  ) 
+
+
 
 
 
