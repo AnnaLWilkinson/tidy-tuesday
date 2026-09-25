@@ -57,7 +57,7 @@ highlight_col <- "#519623"
 
 title <- glue('<span style="font-family:{title_font}; font-size:17pt;">**Losing green space**</span><br>Many cities have reduced the size of green spaces over time.')
 st    <- "Green space per capita in meter squared. 1990 - 2025."
-cap   <- "**Source**: UN Habitat Urban Indicators Database"
+cap   <- glue("**Source**: UN Habitat Urban Indicators Database")
 
 
 
