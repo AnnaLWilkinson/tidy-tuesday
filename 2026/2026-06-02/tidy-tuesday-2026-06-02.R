@@ -221,7 +221,7 @@ p_anim <- animate(
 )
 
 p_anim 
-anim_save("2026/2026-06-02/eplp.gif", animation = p_anim)
+anim_save("2026/2026-06-02/20260602.gif", animation = p_anim)
 
 
 ## END
