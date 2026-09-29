@@ -222,6 +222,9 @@ top_20_area$GC_DEV_WIG_2025 <- factor(top_20_area$GC_DEV_WIG_2025,
                                       levels = c("High income", 
                                                  "Upper middle",
                                                  "Lower middle"))
+hosp_num <- top_20_area |> 
+  select(GC_UCN_MAI_2025, HL_FCL_HOS_2024, GC_DEV_WIG_2025) |> 
+  mutate(HL_SHP_HOS_2025 = 100)
 
 
 top_20_area |> 
@@ -229,6 +232,14 @@ top_20_area |>
              y = HL_SHP_HOS_2025,
              shape = GC_DEV_WIG_2025)) + 
   geom_point(size = 5) + 
+  geom_point(data = hosp_num, 
+             aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+                 y = HL_SHP_HOS_2025,
+                 shape = GC_DEV_WIG_2025)) +
+  geom_label_repel(aes(label = HL_FCL_HOS_2024),
+                   box.padding   = 0.35, 
+                   point.padding = 0.5,
+                   segment.color = 'grey50') +
   scale_y_continuous(limits = c(0,100),
                      expand = c(0.1, 0)) +
   scale_size_continuous(limits = c(0, 10000)) +
@@ -250,12 +261,12 @@ top_20_area |>
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 12),
     plot.title = element_textbox_simple(
-      margin = margin(t = 5, b= 5),
+      margin = margin(t = 5, b= 15),
       size = rel(1)
     ),
     plot.subtitle = element_textbox_simple(
-      margin = margin(t = 5, b= 5),
-      size = rel(0.9)
+      margin = margin(t = 5, b= 20),
+      size = rel(1)
     ),
     plot.caption = element_textbox_simple(
       margin = margin(t = 20, b= 0),
@@ -267,6 +278,7 @@ top_20_area |>
     units = "in", bg = bg_col,
     dpi = 300
   )
+
 
 
 
