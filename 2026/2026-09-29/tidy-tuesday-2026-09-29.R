@@ -14,6 +14,7 @@ library(showtext)
 library(glue)
 library(ggview)
 library(ggtext)
+library(ggrepel)
 library(patchwork)
 
 
@@ -45,7 +46,7 @@ body_font <- "Inter"
 
 # Define text -------------------------------------------------------------
 title <- glue('<span style="font-family:{title_font}; font-size:17pt;">Global Human Settlement Urban Centre Database</span><br>Top 20 largest urban centres (geographical size) by World Bank Income Group.')
-st    <- "Some of the largest cities have a high number of hospitals, well distributed, as indicted by the population living in close proximity"
+st    <- "The urban centre name is followed by (area) in km2. The number of hopitals is displayed on the right of each panel."
 cap   <- glue("**Source**: Global Human Settlement Urban Centre Database Produced by the Joint Research Centre (JRC) of the European Commission")
 
 
@@ -222,26 +223,40 @@ top_20_area$GC_DEV_WIG_2025 <- factor(top_20_area$GC_DEV_WIG_2025,
                                       levels = c("High income", 
                                                  "Upper middle",
                                                  "Lower middle"))
-hosp_num <- top_20_area |> 
-  select(GC_UCN_MAI_2025, HL_FCL_HOS_2024, GC_DEV_WIG_2025) |> 
-  mutate(HL_SHP_HOS_2025 = 100)
 
+top_20_area <- top_20_area |> 
+  mutate(km = as.character(GC_UCA_KM2_2025),
+        city_km = paste0(GC_UCN_MAI_2025, " (", km, ")"))
+
+hosp_num <- top_20_area |> 
+  select(GC_UCN_MAI_2025, HL_FCL_HOS_2024, GC_DEV_WIG_2025, city_km) |> 
+  mutate(HL_SHP_HOS_2025 = 120,
+         HL_FCL_HOS_2024 = as.character(HL_FCL_HOS_2024),
+         HL_FCL_HOS_2024 = stringr::str_trim(HL_FCL_HOS_2024),
+         )
 
 top_20_area |> 
-  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+  ggplot(aes(x = reorder(city_km, HL_SHP_HOS_2025),
              y = HL_SHP_HOS_2025,
              shape = GC_DEV_WIG_2025)) + 
   geom_point(size = 5) + 
   geom_point(data = hosp_num, 
-             aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             aes(x = reorder(city_km, HL_SHP_HOS_2025),
                  y = HL_SHP_HOS_2025,
                  shape = GC_DEV_WIG_2025)) +
-  geom_label_repel(aes(label = HL_FCL_HOS_2024),
-                   box.padding   = 0.35, 
+  geom_label_repel(data = hosp_num, 
+                   aes(x = reorder(city_km, HL_SHP_HOS_2025),
+                       y = HL_SHP_HOS_2025, 
+                       label = HL_FCL_HOS_2024),
+                   box.padding   = 0.3, 
                    point.padding = 0.5,
-                   segment.color = 'grey50') +
-  scale_y_continuous(limits = c(0,100),
-                     expand = c(0.1, 0)) +
+                   segment.color = 'grey50',
+                   seed = 1234,
+                   direction = "x", 
+                   point.size = NA) +
+  scale_y_continuous(limits = c(0,125),
+                     breaks = seq(0,100, 25),
+                     expand = c(0.1, 0.1)) +
   scale_size_continuous(limits = c(0, 10000)) +
   labs(x = "", 
        y = "Living within 1km of a hospital (%)") + 
@@ -277,7 +292,19 @@ top_20_area |>
     width = 9, height = 9,
     units = "in", bg = bg_col,
     dpi = 300
-  )
+  ) -> p
+
+
+
+# Save plot ---------------------------------------------------------------
+
+save_ggplot(
+  plot = p,
+  file = file.path("2026", "2026-09-29", paste0("20260929", ".png"))
+)
+
+## END
+
 
 
 
