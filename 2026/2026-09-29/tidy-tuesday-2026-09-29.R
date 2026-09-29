@@ -14,6 +14,7 @@ library(showtext)
 library(glue)
 library(ggview)
 library(ggtext)
+library(patchwork)
 
 
 # Load data ---------------------------------------------------------------
@@ -43,8 +44,8 @@ body_font <- "Inter"
 
 
 # Define text -------------------------------------------------------------
-title <- glue('<span style="font-family:{title_font}; font-size:17pt;">**XXXXXX**</span><br>XXXXXXXXXXXX.')
-st    <- "XXXXXX"
+title <- glue('<span style="font-family:{title_font}; font-size:17pt;">Global Human Settlement Urban Centre Database</span><br>Top 20 largest urban centres (geographical size) by World Bank Income Group.')
+st    <- "Some of the largest cities have a high number of hospitals, well distributed, as indicted by the population living in close proximity"
 cap   <- glue("**Source**: Global Human Settlement Urban Centre Database Produced by the Joint Research Centre (JRC) of the European Commission")
 
 
@@ -103,40 +104,170 @@ top_10_area <- health |>
   head(10)
 
 
-top_10_area |> 
-  ggplot(aes(x = GC_UCN_MAI_2025, 
-             y = HL_SHP_HOS_2025)) + 
-  geom_point(aes(size = GC_UCA_KM2_2025)) + 
+top_20_area <- health |> 
+  arrange(-GC_UCA_KM2_2025) |> 
+  head(20)
+
+
+
+top_20_area |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025,
+             size = GC_UCA_KM2_2025,
+             shape = GC_DEV_WIG_2025)) + 
+  geom_point() + 
+  labs(x = "", 
+       y = "Living within 1km of a hospital (%)", 
+       size = "") + 
+  coord_flip()
+
+top_20_area |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025,
+             size = GC_UCA_KM2_2025,
+             shape = GC_DEV_WIG_2025)) + 
+  geom_count() + 
+  scale_size_area(max_size = 10) +
   labs(x = "", 
        y = "Living within 1km of a hospital (%)", 
        size = "") + 
   coord_flip()
 
 
-top_10_area |> 
-  ggplot(aes(x = GC_UCN_MAI_2025, 
-             y = HL_FCL_HOS_2024)) + 
-  geom_point(aes(size = GC_UCA_KM2_2025)) + 
+top_20_area |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025,
+             size = GC_UCA_KM2_2025)) + 
+  geom_count() + 
+  scale_size_area(max_size = 10) +
   labs(x = "", 
-       y = "Number of hospitals", 
+       y = "Living within 1km of a hospital (%)", 
        size = "") + 
-  coord_flip()
+  coord_flip() + 
+  facet_grid(~GC_DEV_WIG_2025)
+
+## High income
+p_high <- top_20_area |> 
+  filter(GC_DEV_WIG_2025 == "High income") |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025)) + 
+  geom_point(shape = 15,
+             size = 5) + 
+  scale_y_continuous(limits = c(0,100)) +
+  scale_size_continuous(limits = c(0, 10000)) +
+  labs(x = "", 
+       y = "Living within 1km of a hospital (%)") + 
+  coord_flip() + 
+  theme(
+    legend.position = "none",
+    axis.text = element_text(size = 4)
+  )
+
+p_upper <- top_20_area |> 
+  filter(GC_DEV_WIG_2025 == "Upper Middle") |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025)) + 
+  geom_point(shape = 16,
+             size = 5) + 
+  scale_y_continuous(limits = c(0,100)) +
+  scale_size_continuous(limits = c(0, 10000)) +
+  labs(x = "", 
+       y = "Living within 1km of a hospital (%)") + 
+  coord_flip() + 
+  theme(
+    legend.position = "none"
+  )
 
 
-top_10_area |> 
-  ggplot(aes(x = GC_UCN_MAI_2025, 
-             y = HL_SHP_PHA_2025)) + 
-  geom_point(aes(size = GC_UCA_KM2_2025)) + 
+p_lower <- top_20_area |> 
+  filter(GC_DEV_WIG_2025 == "Lower Middle") |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025)) + 
+  geom_point(shape = 17,
+             size = 5) + 
+  scale_y_continuous(limits = c(0,100)) +
+  scale_size_continuous(limits = c(0, 10000)) +
   labs(x = "", 
-       y = "Living within 1km of a pharmacy (%)", 
-       size = "") + 
-  coord_flip() 
+       y = "Living within 1km of a hospital (%)") + 
+  coord_flip() + 
+  theme(
+    legend.position = "none"
+  )
 
-top_10_area |> 
-  ggplot(aes(x = GC_UCN_MAI_2025, 
-             y = HL_FCL_PHA_2024)) + 
-  geom_point(aes(size = GC_UCA_KM2_2025)) + 
+
+p_high / p_upper / p_lower + 
+  patchwork::plot_layout(axis_titles  = "collect",
+                         axes = "collect_x") &
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.background = element_rect(fill = bg_col, 
+                                     colour = bg_col),
+      panel.background = element_rect(fill = "white", 
+                                      colour = "white"),
+      panel.border = element_rect(colour = "grey",
+                                  fill= NA)) + 
+  canvas(
+    width = 8, height = 8,
+    units = "in", bg = bg_col,
+    dpi = 300
+  ) 
+
+
+
+# Pretty plot -------------------------------------------------------------
+
+top_20_area$GC_DEV_WIG_2025 <- stringr::str_to_sentence(top_20_area$GC_DEV_WIG_2025)
+top_20_area$GC_DEV_WIG_2025 <- factor(top_20_area$GC_DEV_WIG_2025,
+                                      levels = c("High income", 
+                                                 "Upper middle",
+                                                 "Lower middle"))
+
+
+top_20_area |> 
+  ggplot(aes(x = reorder(GC_UCN_MAI_2025, HL_SHP_HOS_2025),
+             y = HL_SHP_HOS_2025,
+             shape = GC_DEV_WIG_2025)) + 
+  geom_point(size = 5) + 
+  scale_y_continuous(limits = c(0,100),
+                     expand = c(0.1, 0)) +
+  scale_size_continuous(limits = c(0, 10000)) +
   labs(x = "", 
-       y = "Number of pharmacies", 
-       size = "") + 
-  coord_flip() 
+       y = "Living within 1km of a hospital (%)") + 
+  coord_flip() + 
+  facet_wrap(~ GC_DEV_WIG_2025, scales = "free_y")  + 
+  labs(title = title,
+       subtitle = st, 
+       caption = cap) +
+  theme_bw(base_size = 11) +
+  theme(
+    legend.position = "none", 
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "white", colour = bg_col),
+    plot.background = element_rect(fill = bg_col, colour = bg_col),
+    plot.margin = margin(t=20,b=20,l=5,r=5),
+    axis.title.x = element_text(vjust = -2),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
+    plot.title = element_textbox_simple(
+      margin = margin(t = 5, b= 5),
+      size = rel(1)
+    ),
+    plot.subtitle = element_textbox_simple(
+      margin = margin(t = 5, b= 5),
+      size = rel(0.9)
+    ),
+    plot.caption = element_textbox_simple(
+      margin = margin(t = 20, b= 0),
+      size = rel(0.9)
+    ),
+  ) + 
+  canvas(
+    width = 9, height = 9,
+    units = "in", bg = bg_col,
+    dpi = 300
+  )
+
+
+
+
