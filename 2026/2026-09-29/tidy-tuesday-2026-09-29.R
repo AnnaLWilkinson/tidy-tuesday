@@ -46,7 +46,7 @@ body_font <- "Inter"
 
 # Define text -------------------------------------------------------------
 title <- glue('<span style="font-family:{title_font}; font-size:17pt;">Global Human Settlement Urban Centre Database</span><br>Top 20 largest urban centres (geographical size) by World Bank Income Group.')
-st    <- "The urban centre name is followed by (area) in km2. The number of hopitals is displayed on the right of each panel."
+st    <- "The urban centre name is followed by (area) in km2. The number of hopitals is displayed on the right of each panel. Example is Osaka has an area of 2,212 km2, with 50% of population living within 1km of a hospital, and a 774 hospitals. "
 cap   <- glue("**Source**: Global Human Settlement Urban Centre Database Produced by the Joint Research Centre (JRC) of the European Commission")
 
 
